@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciador de Bases</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- TEMA PADRÃO (AZUL MODERNO) --- */
+        :root {
+            --bg-dark: #0a0b0f;
+            --bg-light: #1a1d23;
+            --bg-lighter: #252932;
+            --bg-card: #2a2f3a;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-light: #60a5fa;
+            --accent-text: #ffffff;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #f59e0b;
+            --border-color: #374151;
+            --border-light: #4b5563;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-accent: rgba(59, 130, 246, 0.25);
+            --shadow-danger: rgba(239, 68, 68, 0.25);
+            --shadow-success: rgba(16, 185, 129, 0.25);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --gradient-secondary: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        /* --- TEMA C6 BANK (PREMIUM) --- */
+        .c6-theme {
+            --bg-dark: #0d0d0d;
+            --bg-light: #1a1a1a;
+            --bg-lighter: #262626;
+            --bg-card: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #d4d4d8;
+            --text-muted: #a1a1aa;
+            --accent-color: #fbbf24;
+            --accent-hover: #f59e0b;
+            --accent-light: #fcd34d;
+            --accent-text: #0d0d0d;
+            --border-color: #404040;
+            --border-light: #525252;
+            --shadow-accent: rgba(251, 191, 36, 0.3);
+            --gradient-primary: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            --gradient-secondary: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+        }
+        
+        /* --- TEMA ENRIQUECIMENTO (ROXO ELEGANTE) --- */
+        .enrichment-theme {
+            --bg-dark: #0f0a14;
+            --bg-light: #1c1625;
+            --bg-lighter: #2a2332;
+            --bg-card: #332940;
+            --text-primary: #f1f0f3;
+            --text-secondary: #c4b5d1;
+            --text-muted: #9b8aa8;
+            --accent-color: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --accent-light: #a78bfa;
+            --accent-text: #ffffff;
+            --border-color: #4c3a5c;
+            --border-light: #5d4a6d;
+            --shadow-accent: rgba(139, 92, 246, 0.3);
+            --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            --gradient-secondary: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Transições globais suaves */
+        body, .section, .files, .file-item, .logs, select, input, .slider, button, .tab-button, .progress-bar-fill, .container {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0f1419 100%);
+            color: var(--text-primary); 
+            margin: 0; 
+            padding: 24px;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container { 
+            animation: containerFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: var(--bg-light);
+            backdrop-filter: blur(20px);
+            border-radius: 20px; 
+            box-shadow: 
+                0 25px 50px -12px var(--shadow-color),
+                0 0 0 1px var(--border-color),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            padding: 40px; 
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.6;
+        }
+
+        /* Animações aprimoradas */
+        .tab-content { 
+            display: none; 
+            animation: tabContentSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-content.active { display: block; }
+        .file-item.new-item { animation: fileItemSlide 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        @keyframes containerFadeIn { 
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            } 
+        }
+
+        @keyframes tabContentSlide { 
+            from { 
+                opacity: 0; 
+                transform: translateY(15px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        }
+
+        @keyframes fileItemSlide { 
+            from { 
+                opacity: 0; 
+                transform: translateX(-20px) scale(0.95); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateX(0) scale(1); 
+            } 
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Tipografia melhorada */
+        h1, h2 { 
+            text-align: center; 
+            color: var(--text-primary); 
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        h1 { 
+            font-size: 2.5rem; 
+            margin-bottom: 32px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+        }
+
+        h2 { 
+            font-size: 1.5rem; 
+            border-bottom: 2px solid var(--border-color); 
+            padding-bottom: 12px; 
+            margin-top: 0; 
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: var(--gradient-primary);
+            border-radius: 1px;
+        }
+
+        /* Layout grid aprimorado */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); 
+            gap: 32px; 
+        }
+
+        .section { 
+            background: var(--bg-card);
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            padding: 32px; 
+            box-shadow: 
+                0 10px 25px -5px var(--shadow-color),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.3;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 20px 40px -10px var(--shadow-color),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        hr { 
+            border: none; 
+            height: 1px; 
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 32px 0; 
+        }
+
+        /* Tabs melhoradas */
+        .tabs { 
+            display: flex; 
+            border-bottom: 1px solid var(--border-color); 
+            margin-bottom: 32px;
+            background: var(--bg-lighter);
+            border-radius: 12px 12px 0 0;
+            padding: 8px;
+            gap: 4px;
+        }
+
+        .tab-button { 
+            padding: 16px 24px; 
+            cursor: pointer; 
+            border: none; 
+            background: transparent;
+            font-size: 15px; 
+            font-weight: 600; 
+            color: var(--text-secondary); 
+            position: relative; 
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-button.active { 
+            color: var(--accent-text);
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 12px var(--shadow-accent);
+        }
+
+        .tab-button:hover:not(.active) { 
+            color: var(--accent-light);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Botões premium */
+        button { 
+            background: var(--gradient-primary);
+            color: var(--accent-text);
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            margin: 6px 6px 6px 0; 
+            font-size: 14px; 
+            font-weight: 600; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            box-shadow: 
+                0 4px 12px var(--shadow-accent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button svg { 
+            fill: var(--accent-text);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:hover { 
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 
+                0 8px 25px var(--shadow-accent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        button:hover svg {
+            transform: scale(1.1);
+        }
+
+        button:active { 
+            transform: translateY(0) scale(0.98);
+            transition-duration: 0.1s;
+        }
+
+        button:disabled { 
+            background: var(--bg-lighter);
+            color: var(--text-muted);
+            cursor: not-allowed; 
+            transform: none;
+            box-shadow: none;
+        }
+
+        button:disabled svg { fill: var(--text-muted); }
+
+        .btn-danger { 
+            background: var(--gradient-danger);
+            box-shadow: 0 4px 12px var(--shadow-danger);
+        }
+
+        .btn-danger svg { fill: #fff; }
+
+        .btn-danger:hover { 
+            box-shadow: 0 8px 25px var(--shadow-danger);
+        }
+        
+        /* Inputs e selects melhorados */
+        label { 
+            margin-right: 8px; 
+            font-weight: 500; 
+            color: var(--text-secondary); 
+            display: inline-block; 
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .strategy-group label { margin-right: 24px; }
+
+        select, input[type="text"] { 
+            background: var(--bg-dark);
+            color: var(--text-primary); 
+            border: 1px solid var(--border-color); 
+            padding: 12px 16px; 
+            border-radius: 10px; 
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 
+                0 0 0 3px var(--shadow-accent),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* Área de arquivos melhorada */
+        .files { 
+            min-height: 50px; 
+            padding: 16px; 
+            background: var(--bg-dark);
+            border-radius: 12px; 
+            margin-top: 12px; 
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .files:empty::after {
+            content: 'Nenhum arquivo selecionado';
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .file-item { 
+            background: var(--bg-lighter);
+            color: var(--text-primary); 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            margin-top: 8px; 
+            font-size: 13px; 
+            border-left: 4px solid var(--accent-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .file-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Logs premium */
+        .logs { 
+            height: 240px; 
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color); 
+            color: var(--text-secondary); 
+            border-radius: 12px; 
+            padding: 20px; 
+            overflow-y: auto; 
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; 
+            font-size: 13px; 
+            white-space: pre-wrap; 
+            margin-top: 12px; 
+            line-height: 1.6;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .logs::-webkit-scrollbar { width: 8px; }
+        .logs::-webkit-scrollbar-track { 
+            background: var(--bg-lighter);
+            border-radius: 4px;
+        }
+        .logs::-webkit-scrollbar-thumb { 
+            background: var(--accent-color);
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .logs::-webkit-scrollbar-thumb:hover { 
+            background: var(--accent-hover);
+        }
+        
+        /* Barra de progresso premium */
+        .progress-bar-container { 
+            width: 100%; 
+            background: var(--bg-dark);
+            border-radius: 8px; 
+            height: 16px; 
+            margin-top: 20px; 
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .progress-bar-fill { 
+            width: 0%; 
+            height: 100%; 
+            background: var(--gradient-primary);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        /* Grupos de ferramentas */
+        .tool-group {
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 24px;
+        }
+
+        .tool-group:first-child { 
+            padding-top: 0; 
+            border-top: none; 
+            margin-top: 0;
+        }
+        
+        /* Toggle switches premium */
+        .toggle-switch { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 20px; 
+        }
+
+        .switch { 
+            position: relative; 
+            display: inline-block; 
+            width: 56px; 
+            height: 32px; 
+        }
+
+        .switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+
+        .slider { 
+            position: absolute; 
+            cursor: pointer; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: var(--danger-color);
+            border-radius: 32px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 24px; 
+            width: 24px; 
+            left: 4px; 
+            bottom: 4px; 
+            background: white;
+            border-radius: 50%; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input:checked + .slider { 
+            background: var(--gradient-success);
+        }
+
+        input:focus + .slider { 
+            box-shadow: 
+                0 0 0 3px var(--shadow-accent),
+                inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider:before { 
+            transform: translateX(24px);
+        }
+
+        .toggle-label { 
+            margin-left: 16px; 
+            font-weight: 600; 
+            color: var(--text-secondary);
+            transition: color 0.3s;
+        }
+
+        .toggle-switch:hover .toggle-label {
+            color: var(--text-primary);
+        }
+
+        /* Dropzone melhorada */
+        #apiDropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 24px;
+            background: var(--bg-dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #apiDropzone:hover {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.05);
+            transform: translateY(-2px);
+        }
+
+        #apiDropzone.dragover {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 20px var(--shadow-accent);
+        }
+
+        /* Responsividade melhorada */
+        @media (max-width: 1200px) {
+            .grid { 
+                grid-template-columns: 1fr; 
+                gap: 24px; 
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .container { 
+                padding: 24px; 
+                border-radius: 16px;
+            }
+            h1 { font-size: 2rem; }
+            .tabs { 
+                flex-direction: column; 
+                gap: 2px;
+            }
+            .tab-button { 
+                padding: 12px 16px; 
+                text-align: left;
+            }
+        }
+
+        /* Estados de loading */
+        .loading {
+            animation: pulse 2s infinite;
+        }
+
+        /* Micro-interações */
+        .file-item:first-child {
+            margin-top: 0;
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        /* Melhorias de acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.9em;
+            position: relative; /* Garante que o rodapé não seja sobreposto */
+            z-index: 10; /* Garante que o rodapé esteja acima de outros elementos */
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        #header-content {
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 80px; /* Garante espaço para o título e descrição */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #current-tab-title {
+            margin-bottom: 5px;
+            color: var(--accent-color);
+            font-size: 1.8em; /* Aumenta o tamanho para destaque */
+            font-weight: 700;
+        }
+
+        #current-tab-description {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            max-width: 80%; /* Limita a largura para melhor leitura */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h1.hidden { /* Nova classe para esconder o h1 principal */
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="main-app-title">Gerenciador de Bases</h1>
+        <div id="header-content" style="text-align: center; margin-bottom: 20px;">
+            <h2 id="current-tab-title" style="margin-bottom: 5px; color: var(--accent-color);"></h2>
+            <p id="current-tab-description" style="color: var(--text-secondary); font-size: 1.1em;"></p>
+        </div>
+        <div class="tabs">
+            <button class="tab-button">Limpeza Local</button>
+            <button class="tab-button">Consulta CNPJ (API)</button>
+            <button class="tab-button">Enriquecimento</button>
+        </div>
+
+        <div id="local" class="tab-content">
+             <div class="grid">
+                <div class="section">
+                    <h2>Limpeza por Lista Raiz</h2>
+                    <button id="selectRootBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>1. Sel. Lista Raiz</button>
+                    <button id="autoRootBtn">Auto Raiz: OFF</button>
+                    <div id="rootFilePath" class="files"></div>
+                    <label for="rootCol">Coluna Raiz:</label>
+                    <select id="rootCol"><option value="A" selected>A</option><option value="B">B</option><option value="C">C</option></select>
+                    <hr>
+                    <button id="addCleanFileBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 6.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V11a.5.5 0 0 1-1 0V9.5H6a.5.5 0 0 1 0-1h1.5V7a.5.5 0 0 1 .5-.5z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>2. Adicionar Arquivos</button>
+                    <div id="selectedCleanFiles" class="files"></div>
+                    <label for="destCol">Coluna de Destino:</label>
+                    <select id="destCol"><option value="A">A</option><option value="B" selected>B</option><option value="C">C</option></select>
+                    <hr>
+                    <button id="startCleaningBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 8.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H2z"/><path d="M2.5 4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>3. Iniciar Limpeza</button>
+                    <button id="resetLocalBtn" class="btn-danger"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>Reiniciar</button>
+                    <br><br>
+                    <label><input type="checkbox" id="backupCheckbox"> Criar Backup</label>
+                </div>
+                
+                <div class="section">
+                    <h2>Ferramentas Adicionais</h2>
+                    <div class="tool-group">
+                        <button id="updateBlocklistBtn">Atualizar Raiz com Blocklist</button>
+                    </div>
+
+                    <div class="tool-group">
+                        <div class="db-options">
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="checkDbCheckbox"><span class="slider"></span></label>
+                                <span class="toggle-label">Consultar CNPJs no BD</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="saveToDbCheckbox"><span class="slider"></span></label>
+                                <span class="toggle-label">Salvar novos CNPJs no BD</span>
+                            </div>
+                        </div>
+                        <button id="consultDbBtn">Consulta Apenas pelo BD</button>
+                        <button id="saveStoredCnpjsBtn">Salvar Histórico em Excel</button>
+                    </div>
+
+                    <div class="tool-group">
+                        <label for="batchIdInput">ID do Lote para Exclusão</label>
+                        <input type="text" id="batchIdInput" placeholder="Cole o ID do lote aqui" style="width: 100%; margin-bottom: 10px;">
+                        <button id="deleteBatchBtn" class="btn-danger">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                               <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                               <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            Excluir Lote
+                        </button>
+                    </div>
+
+                    <div class="tool-group">
+                        <label><input type="checkbox" id="autoAdjustPhonesCheckbox"> Ajustar Fones Pós-Limpeza</label>
+                        <button id="adjustPhonesBtn">Ajustar Fones (Manual)</button>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <button id="selectMergeFilesBtn">Selecionar Arquivos para Mesclar</button>
+                        <button id="startMergeBtn">Mesclar</button>
+                        <div id="selectedMergeFiles" class="files"></div>
+                    </div>
+                </div>
+                
+                <div class="section full-width">
+                    <h2>Logs e Progresso da Limpeza</h2>
+                    <div id="progressContainer"></div>
+                    <div id="uploadProgressContainer" style="display: none; margin-top: 20px;">
+                        <strong id="uploadProgressTitle"></strong>
+                        <div class="progress-bar-container" style="height: 14px;">
+                            <div class="progress-bar-fill" id="uploadProgressBarFill" style="background: var(--success-color);"></div>
+                        </div>
+                        <span id="uploadProgressText" style="font-size: 13px; color: var(--text-secondary);"></span>
+                    </div>
+                    <div id="log" class="logs">Aguardando início do sistema...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="api" class="tab-content">
+            <div class="grid">
+                <div class="section">
+                    <h2>Fila de Processamento da API</h2>
+                    <div id="apiDropzone">
+                        <p style="margin:0; font-size: 16px; font-weight: 600;">Arraste e solte as planilhas aqui</p>
+                        <p style="font-size: 14px; margin: 12px 0; color: var(--text-muted);">ou</p>
+                        <button id="selectApiFileBtn">Selecione os Arquivos</button>
+                    </div>
+                    <div id="apiQueueContainer">
+                        <h4>Em Processamento:</h4>
+                        <div id="apiProcessing" class="files"><span style="color:var(--text-secondary)">Nenhum</span></div>
+                        <h4>Fila de Espera:</h4>
+                        <div id="apiPending" class="files"><span style="color:var(--text-secondary)">Nenhum arquivo na fila</span></div>
+                        <h4>Concluídos:</h4>
+                        <div id="apiCompleted" class="files"><span style="color:var(--text-secondary)">Nenhum arquivo concluído</span></div>
+                    </div>
+                </div>
+                <div class="section">
+                    <h2>Configurações e Ações</h2>
+                    <div style="margin-bottom: 20px;">
+                      <label for="apiKeySelection">Perfil de Chaves:</label>
+                      <select id="apiKeySelection">
+                        <option value="chave1" selected>Chave 1 (Padrão)</option>
+                        <option value="chave2">Chave 2 (Alternativa)</option>
+                        <option value="intercalar">Intercalar Chaves (Automático)</option>
+                      </select>
+                    </div>
+                    <hr>
+                    <button id="startApiBtn" disabled><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>Iniciar Fila</button>
+                    <button id="resetApiBtn" class="btn-danger"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>Limpar Fila</button>
+                    <p style="margin-top: 20px;"><strong>Status Geral:</strong> <span id="apiStatus">Aguardando</span></p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="apiProgressBarFill"></div>
+                    </div>
+                    <h3 style="margin-top: 20px;">Log da Operação Atual</h3>
+                    <div id="apiLog" class="logs"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="enriquecimento" class="tab-content">
+            <div class="grid">
+                <div class="section">
+                    <h2>Alimentar Banco de Dados</h2>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        Use esta função para enviar planilhas mestras e popular o banco de dados de enriquecimento.
+                    </p>
+                    <button id="selectMasterFilesBtn">1. Selecionar Planilhas Mestras</button>
+                    <div id="selectedMasterFiles" class="files"></div>
+                    <button id="startLoadToDbBtn">2. Iniciar Carga para o BD</button>
+                </div>
+                <div class="section">
+                    <h2>Enriquecer Planilhas</h2>
+                     <p style="font-size: 14px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        Carregue suas listas para adicionar os telefones a partir do banco de dados.
+                    </p>
+                    <button id="selectEnrichFilesBtn">1. Selecionar Arquivos para Enriquecer</button>
+                    <div id="selectedEnrichFiles" class="files"></div>
+                    <div style="margin-top: 15px;">
+                        <label>Estratégia de Preenchimento:</label>
+                        <div class="strategy-group" style="display: inline-block;">
+                           <input type="radio" id="enrichStrategyAppend" name="enrichStrategy" value="append" checked>
+                           <label for="enrichStrategyAppend">Anexar</label>
+                           <input type="radio" id="enrichStrategyOverwrite" name="enrichStrategy" value="overwrite">
+                           <label for="enrichStrategyOverwrite">Sobrescrever</label>
+                           <input type="radio" id="enrichStrategyIgnore" name="enrichStrategy" value="ignore">
+                           <label for="enrichStrategyIgnore">Ignorar</label>
+                        </div>
+                    </div>
+                    <button id="startEnrichmentBtn" style="margin-top: 10px;">2. Iniciar Enriquecimento</button>
+                </div>
+            </div>
+             <div class="section full-width">
+                <h2>Logs e Progresso do Enriquecimento</h2>
+                <div id="enrichmentProgressContainer"></div>
+                <div id="enrichmentLog" class="logs">Aguardando início...</div>
+            </div>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+    <footer>
+        <p>Criador: Davi Abraão | Versão: 2.1</p>
+    </footer>
+</body>
+</html>
+

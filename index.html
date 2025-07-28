@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciador de Bases</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        /* --- TEMA PADRÃO (AZUL MODERNO) --- */
+        :root {
+            --bg-dark: #0a0b0f;
+            --bg-light: #1a1d23;
+            --bg-lighter: #252932;
+            --bg-card: #2a2f3a;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-light: #60a5fa;
+            --accent-text: #ffffff;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #f59e0b;
+            --border-color: #374151;
+            --border-light: #4b5563;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-accent: rgba(59, 130, 246, 0.25);
+            --shadow-danger: rgba(239, 68, 68, 0.25);
+            --shadow-success: rgba(16, 185, 129, 0.25);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --gradient-secondary: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        /* --- TEMA C6 BANK (PREMIUM) --- */
+        .c6-theme {
+            --bg-dark: #0d0d0d;
+            --bg-light: #1a1a1a;
+            --bg-lighter: #262626;
+            --bg-card: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #d4d4d8;
+            --text-muted: #a1a1aa;
+            --accent-color: #fbbf24;
+            --accent-hover: #f59e0b;
+            --accent-light: #fcd34d;
+            --accent-text: #0d0d0d;
+            --border-color: #404040;
+            --border-light: #525252;
+            --shadow-accent: rgba(251, 191, 36, 0.3);
+            --gradient-primary: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            --gradient-secondary: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+        }
+        
+        /* --- TEMA ENRIQUECIMENTO (ROXO ELEGANTE) --- */
+        .enrichment-theme {
+            --bg-dark: #0f0a14;
+            --bg-light: #1c1625;
+            --bg-lighter: #2a2332;
+            --bg-card: #332940;
+            --text-primary: #f1f0f3;
+            --text-secondary: #c4b5d1;
+            --text-muted: #9b8aa8;
+            --accent-color: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --accent-light: #a78bfa;
+            --accent-text: #ffffff;
+            --border-color: #4c3a5c;
+            --border-light: #5d4a6d;
+            --shadow-accent: rgba(139, 92, 246, 0.3);
+            --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            --gradient-secondary: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        }
+        
+        /* --- TEMA AUTOMAÇÃO (PRETO PROFUNDO) --- */
+        .automation-theme {
+            --bg-dark: #000000;
+            --bg-light: #0a0a0a;
+            --bg-lighter: #1a1a1a;
+            --bg-card: #1f1f1f;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a3e635; /* Lime for 'neon' feel */
+            --text-muted: #888888;
+            --accent-color: #4ade80;
+            --accent-hover: #22c55e;
+            --accent-light: #86efac;
+            --accent-text: #000000; /* Black text on green buttons */
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #f59e0b;
+            --border-color: #333333;
+            --border-light: #444444;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --shadow-accent: rgba(74, 222, 128, 0.25);
+            --shadow-danger: rgba(239, 68, 68, 0.25);
+            --shadow-success: rgba(16, 185, 129, 0.25);
+            --gradient-primary: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            --gradient-secondary: linear-gradient(135deg, #a3e635 0%, #4ade80 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Transições globais suaves */
+        body, .section, .files, .file-item, .logs, select, input, .slider, button, .tab-button, .progress-bar-fill, .container {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0f1419 100%);
+            color: var(--text-primary); 
+            margin: 0; 
+            padding: 24px;
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 14px; /* Slightly smaller base font size */
+        }
+
+        .container { 
+            animation: containerFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: var(--bg-light);
+            backdrop-filter: blur(20px);
+            border-radius: 20px; 
+            box-shadow: 
+                0 25px 50px -12px var(--shadow-color),
+                0 0 0 1px var(--border-color),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            padding: 40px; 
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.6;
+        }
+
+        /* Animações aprimoradas */
+        .tab-content { 
+            display: none; 
+            animation: tabContentSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-content.active { display: block; }
+        .file-item.new-item { animation: fileItemSlide 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        @keyframes containerFadeIn { 
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            } 
+        }
+
+        @keyframes tabContentSlide { 
+            from { 
+                opacity: 0; 
+                transform: translateY(15px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        }
+
+        @keyframes fileItemSlide { 
+            from { 
+                opacity: 0; 
+                transform: translateX(-20px) scale(0.95); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateX(0) scale(1); 
+            } 
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Tipografia melhorada */
+        h1, h2 { 
+            text-align: center; 
+            color: var(--text-primary); 
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        h1 { 
+            font-size: 2.2rem; /* Slightly smaller */
+            margin-bottom: 24px; /* Reduced margin */
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+        }
+
+        h2 { 
+            font-size: 1.3rem; /* Slightly smaller */
+            border-bottom: 2px solid var(--border-color); 
+            padding-bottom: 10px; /* Reduced padding */
+            margin-top: 0; 
+            margin-bottom: 20px; /* Reduced margin */
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: var(--gradient-primary);
+            border-radius: 1px;
+        }
+
+        /* Layout grid aprimorado */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); /* Adjusted min-width */
+            gap: 24px; /* Reduced gap */
+        }
+
+        .section { 
+            background: var(--bg-card);
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            padding: 28px; /* Reduced padding */
+            box-shadow: 
+                0 10px 25px -5px var(--shadow-color),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.3;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 20px 40px -10px var(--shadow-color),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Estilos para drag and drop */
+        .section.sortable-ghost {
+            opacity: 0.4;
+            transform: rotate(5deg);
+        }
+
+        .section.sortable-drag {
+            transform: rotate(5deg);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .section.sortable-chosen {
+            cursor: grabbing;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-controls {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .section:hover .section-controls {
+            opacity: 1;
+        }
+
+        .section-control-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: var(--bg-lighter);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .section-control-btn:hover {
+            background: var(--accent-color);
+            color: var(--accent-text);
+            transform: scale(1.1);
+        }
+
+        .drag-handle {
+            cursor: grab;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .section.hidden {
+            min-height: auto;
+        }
+
+        .section.hidden > *:not(.section-header) {
+            display: none;
+        }
+
+        .section.hidden .section-header {
+            opacity: 0.6;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 0;
+        }
+
+        .section.hidden .section-header h2 {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        hr { 
+            border: none; 
+            height: 1px; 
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 28px 0; /* Reduced margin */
+        }
+
+        /* Tabs melhoradas */
+        .tabs { 
+            display: flex; 
+            border-bottom: 1px solid var(--border-color); 
+            margin-bottom: 28px; /* Reduced margin */
+            background: var(--bg-lighter);
+            border-radius: 12px 12px 0 0;
+            padding: 8px;
+            gap: 4px;
+        }
+
+        .tab-button { 
+            padding: 14px 20px; /* Reduced padding */
+            cursor: pointer; 
+            border: none; 
+            background: transparent;
+            font-size: 14px; /* Slightly smaller */
+            font-weight: 600; 
+            color: var(--text-secondary); 
+            position: relative; 
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-button.active { 
+            color: var(--accent-text);
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 12px var(--shadow-accent);
+        }
+
+        .tab-button:hover:not(.active) { 
+            color: var(--accent-light);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Botões premium */
+        button { 
+            background: var(--gradient-primary);
+            color: var(--accent-text);
+            border: none; 
+            padding: 10px 16px; /* Reduced padding */
+            border-radius: 8px; /* Slightly smaller radius */
+            cursor: pointer; 
+            margin: 4px 4px 4px 0; /* Reduced margin */
+            font-size: 13px; /* Slightly smaller */
+            font-weight: 600; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; /* Reduced gap */
+            box-shadow: 
+                0 4px 12px var(--shadow-accent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover { 
+            transform: translateY(-1px) scale(1.01); /* Reduced transform */
+            box-shadow: 
+                0 6px 20px var(--shadow-accent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3); /* Adjusted shadow */
+        }
+
+        button:active { 
+            transform: translateY(0) scale(0.99); /* Adjusted scale */
+            transition-duration: 0.1s;
+        }
+
+        button:disabled { 
+            background: var(--bg-lighter);
+            color: var(--text-muted);
+            cursor: not-allowed; 
+            transform: none;
+            box-shadow: none;
+        }
+
+        button:disabled svg { fill: var(--text-muted); }
+
+        .btn-danger { 
+            background: var(--gradient-danger);
+            box-shadow: 0 4px 12px var(--shadow-danger);
+        }
+
+        .btn-danger svg { fill: #fff; }
+
+        .btn-danger:hover { 
+            box-shadow: 0 6px 20px var(--shadow-danger); /* Adjusted shadow */
+        }
+        
+        /* Inputs e selects melhorados */
+        label { 
+            margin-right: 8px; 
+            font-weight: 500; 
+            color: var(--text-secondary); 
+            display: inline-block; 
+            margin-bottom: 6px; /* Reduced margin */
+            font-size: 13px; /* Slightly smaller */
+        }
+
+        .strategy-group label { margin-right: 20px; /* Reduced margin */}
+
+        select, input[type="text"] { 
+            background: var(--bg-dark);
+            color: var(--text-primary); 
+            border: 1px solid var(--border-color); 
+            padding: 10px 14px; /* Reduced padding */
+            border-radius: 8px; /* Slightly smaller radius */
+            font-family: 'Inter', sans-serif;
+            font-size: 13px; /* Slightly smaller */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 
+                0 0 0 2px var(--shadow-accent), /* Reduced shadow */
+                inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* Área de arquivos melhorada */
+        .files { 
+            min-height: 40px; /* Reduced min-height */
+            padding: 14px; /* Reduced padding */
+            background: var(--bg-dark);
+            border-radius: 10px; /* Slightly smaller radius */
+            margin-top: 10px; /* Reduced margin */
+            margin-bottom: 16px; /* Reduced margin */
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .files:empty::after {
+            content: 'Nenhum arquivo selecionado';
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 13px; /* Slightly smaller */
+        }
+
+        .file-item { 
+            background: var(--bg-lighter);
+            color: var(--text-primary); 
+            padding: 10px 14px; /* Reduced padding */
+            border-radius: 6px; /* Slightly smaller radius */
+            margin-top: 6px; /* Reduced margin */
+            font-size: 12px; /* Slightly smaller */
+            border-left: 3px solid var(--accent-color); /* Reduced border */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .file-item:hover {
+            transform: translateX(3px); /* Reduced transform */
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15); /* Adjusted shadow */
+        }
+        
+        /* Logs premium */
+        .logs { 
+            height: 200px; /* Reduced height */
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color); 
+            color: var(--text-secondary); 
+            border-radius: 10px; /* Slightly smaller radius */
+            padding: 16px; /* Reduced padding */
+            overflow-y: auto; 
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; 
+            font-size: 12px; /* Slightly smaller */
+            white-space: pre-wrap; 
+            margin-top: 10px; /* Reduced margin */
+            line-height: 1.5; /* Reduced line height */
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2); /* Adjusted shadow */
+        }
+
+        .logs::-webkit-scrollbar { width: 6px; /* Reduced width */}
+        .logs::-webkit-scrollbar-track { 
+            background: var(--bg-lighter);
+            border-radius: 3px; /* Reduced radius */
+        }
+        .logs::-webkit-scrollbar-thumb { 
+            background: var(--accent-color);
+            border-radius: 3px; /* Reduced radius */
+            transition: background 0.3s;
+        }
+        .logs::-webkit-scrollbar-thumb:hover { 
+            background: var(--accent-hover);
+        }
+        
+        /* Barra de progresso premium */
+        .progress-bar-container { 
+            width: 100%; 
+            background: var(--bg-dark);
+            border-radius: 6px; /* Reduced radius */
+            height: 12px; /* Reduced height */
+            margin-top: 16px; /* Reduced margin */
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); /* Adjusted shadow */
+            position: relative;
+        }
+
+        .progress-bar-fill { 
+            width: 0%; 
+            height: 100%; 
+            background: var(--gradient-primary);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        /* Grupos de ferramentas */
+        .tool-group {
+            padding-top: 20px; /* Reduced padding */
+            border-top: 1px solid var(--border-color);
+            margin-top: 20px; /* Reduced margin */
+        }
+
+        .tool-group:first-child { 
+            padding-top: 0; 
+            border-top: none; 
+            margin-top: 0;
+        }
+        
+        /* Toggle switches premium */
+        .toggle-switch { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 16px; /* Reduced margin */
+        }
+
+        .switch { 
+            position: relative; 
+            display: inline-block; 
+            width: 48px; /* Reduced width */
+            height: 28px; /* Reduced height */
+        }
+
+        .switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+
+        .slider { 
+            position: absolute; 
+            cursor: pointer; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: var(--danger-color);
+            border-radius: 28px; /* Adjusted radius */
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); /* Adjusted shadow */
+        }
+
+        .slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 20px; /* Reduced height */
+            width: 20px; /* Reduced width */
+            left: 4px; 
+            bottom: 4px; 
+            background: white;
+            border-radius: 50%; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3); /* Adjusted shadow */
+        }
+
+        input:checked + .slider { 
+            background: var(--gradient-success);
+        }
+
+        input:focus + .slider { 
+            box-shadow: 
+                0 0 0 2px var(--shadow-accent), /* Reduced shadow */
+                inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider:before { 
+            transform: translateX(20px); /* Adjusted transform */
+        }
+
+        .toggle-label { 
+            margin-left: 12px; /* Reduced margin */
+            font-weight: 600; 
+            color: var(--text-secondary);
+            transition: color 0.3s;
+            font-size: 13px; /* Slightly smaller */
+        }
+
+        .toggle-switch:hover .toggle-label {
+            color: var(--text-primary);
+        }
+
+        /* Dropzone melhorada */
+        #apiDropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px; /* Reduced radius */
+            padding: 30px; /* Reduced padding */
+            text-align: center;
+            margin-bottom: 20px; /* Reduced margin */
+            background: var(--bg-dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #apiDropzone:hover {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.05);
+            transform: translateY(-1px); /* Reduced transform */
+        }
+
+        #apiDropzone.dragover {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 15px var(--shadow-accent); /* Reduced shadow */
+        }
+
+        /* Responsividade melhorada */
+        @media (max-width: 1200px) {
+            .grid { 
+                grid-template-columns: 1fr; 
+                gap: 20px; /* Reduced gap */
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; /* Reduced padding */}
+            .container { 
+                padding: 20px; /* Reduced padding */
+                border-radius: 12px; /* Reduced radius */
+            }
+            h1 { font-size: 1.8rem; /* Reduced font size */}
+            .tabs { 
+                flex-direction: column; 
+                gap: 2px;
+            }
+            .tab-button { 
+                padding: 10px 14px; /* Reduced padding */
+                text-align: left;
+            }
+        }
+
+        /* Estados de loading */
+        .loading {
+            animation: pulse 2s infinite;
+        }
+
+        /* Micro-interações */
+        .file-item:first-child {
+            margin-top: 0;
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
+        /* Melhorias de acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px; /* Reduced margin */
+            padding-top: 16px; /* Reduced padding */
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.85em; /* Slightly smaller */
+            position: relative; 
+            z-index: 10; 
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        #header-content {
+            text-align: center;
+            margin-bottom: 16px; /* Reduced margin */
+            min-height: 70px; /* Adjusted min-height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #current-tab-title {
+            margin-bottom: 4px; /* Reduced margin */
+            color: var(--accent-color);
+            font-size: 1.6em; /* Adjusted font size */
+            font-weight: 700;
+        }
+
+        #current-tab-description {
+            color: var(--text-secondary);
+            font-size: 1em; /* Adjusted font size */
+            max-width: 80%; 
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h1.hidden { 
+            display: none;
+        }
+        /* Estilo para a mensagem de atualização no rodapé */
+        #update-message { font-size: 11px; color: var(--accent-light); margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="main-app-title">Gerenciador de Bases</h1>
+        <div id="header-content">
+            <h2 id="current-tab-title"></h2>
+            <p id="current-tab-description"></p>
+        </div>
+        <div class="tabs">
+            <button class="tab-button">Limpeza Local</button>
+            <button class="tab-button">Consulta CNPJ (API)</button>
+            <button class="tab-button">Enriquecimento</button>
+            <button class="tab-button">Automação</button>
+        </div>
+
+        <div id="local" class="tab-content">
+             <div class="grid" id="localGrid">
+                <div class="section" data-section-id="limpeza-lista-raiz">
+                    <div class="section-header">
+                        <h2>Limpeza por Lista Raiz</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <button id="selectRootBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>1. Sel. Lista Raiz</button>
+                    <button id="autoRootBtn">Auto Raiz: OFF</button>
+                    <button id="feedRootBtn">Alimentar Raiz</button>
+                    <div id="rootFilePath" class="files"></div>
+                    <label for="rootCol">Coluna Raiz:</label>
+                    <select id="rootCol"><option value="A" selected>A</option><option value="B">B</option><option value="C">C</option></select>
+                    <hr>
+                    <button id="addCleanFileBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 6.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V11a.5.5 0 0 1-1 0V9.5H6a.5.5 0 0 1 0-1h1.5V7a.5.5 0 0 1 .5-.5z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>2. Adicionar Arquivos</button>
+                    <div id="selectedCleanFiles" class="files"></div>
+                    <label for="destCol">Coluna de Destino:</label>
+                    <select id="destCol"><option value="A">A</option><option value="B" selected>B</option><option value="C">C</option></select>
+                    <hr>
+                    <button id="startCleaningBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 8.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H2z"/><path d="M2.5 4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>3. Iniciar Limpeza</button>
+                    <button id="resetLocalBtn" class="btn-danger"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>Reiniciar</button>
+                    <br><br>
+                    <label><input type="checkbox" id="backupCheckbox"> Criar Backup</label>
+                </div>
+                
+                <div class="section" data-section-id="ferramentas-adicionais">
+                    <div class="section-header">
+                        <h2>Ferramentas Adicionais</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <div class="tool-group">
+                        <button id="updateBlocklistBtn">Atualizar Raiz com Blocklist</button>
+                    </div>
+
+                    <div class="tool-group">
+                        <div class="db-options">
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="checkDbCheckbox"><span class="slider"></span></label>
+                                <span class="toggle-label">Consultar CNPJs no BD</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="saveToDbCheckbox"><span class="slider"></span></label>
+                                <span class="toggle-label">Salvar novos CNPJs no BD</span>
+                            </div>
+                        </div>
+                        <button id="consultDbBtn">Consulta Apenas pelo BD</button>
+                        <button id="saveStoredCnpjsBtn">Salvar Histórico em Excel</button>
+                    </div>
+
+                    <div class="tool-group">
+                        <label for="batchIdInput">ID do Lote para Exclusão</label>
+                        <input type="text" id="batchIdInput" placeholder="Cole o ID do lote aqui" style="width: 100%; margin-bottom: 10px;">
+                        <button id="deleteBatchBtn" class="btn-danger">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                               <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                               <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            Excluir Lote
+                        </button>
+                    </div>
+
+                    <div class="tool-group">
+                        <label><input type="checkbox" id="autoAdjustPhonesCheckbox"> Ajustar Fones Pós-Limpeza</label>
+                        <button id="adjustPhonesBtn">Ajustar Fones (Manual)</button>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <button id="selectMergeFilesBtn">Selecionar Arquivos para Mesclar</button>
+                        <button id="startMergeBtn">Mesclar</button>
+                        <div id="selectedMergeFiles" class="files"></div>
+                    </div>
+                </div>
+                
+                <div class="section full-width" data-section-id="logs-progresso-limpeza">
+                    <div class="section-header">
+                        <h2>Logs e Progresso da Limpeza</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <div id="progressContainer"></div>
+                    <div id="uploadProgressContainer" style="display: none; margin-top: 20px;">
+                        <strong id="uploadProgressTitle"></strong>
+                        <div class="progress-bar-container" style="height: 14px;">
+                            <div class="progress-bar-fill" id="uploadProgressBarFill" style="background: var(--success-color);"></div>
+                        </div>
+                        <span id="uploadProgressText" style="font-size: 13px; color: var(--text-secondary);"></span>
+                    </div>
+                    <div id="log" class="logs">Aguardando início do sistema...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="api" class="tab-content">
+            <div class="grid" id="apiGrid">
+                <div class="section" data-section-id="fila-processamento-api">
+                    <div class="section-header">
+                        <h2>Fila de Processamento da API</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <div id="apiDropzone">
+                        <p style="margin:0; font-size: 16px; font-weight: 600;">Arraste e solte as planilhas aqui</p>
+                        <p style="font-size: 14px; margin: 12px 0; color: var(--text-muted);">ou</p>
+                        <button id="selectApiFileBtn">Selecione os Arquivos</button>
+                    </div>
+                    <div id="apiQueueContainer">
+                        <h4>Em Processamento:</h4>
+                        <div id="apiProcessing" class="files"><span style="color:var(--text-secondary)">Nenhum</span></div>
+                        <h4>Fila de Espera:</h4>
+                        <div id="apiPending" class="files"><span style="color:var(--text-secondary)">Nenhum arquivo na fila</span></div>
+                        <h4>Concluídos:</h4>
+                        <div id="apiCompleted" class="files"><span style="color:var(--text-secondary)">Nenhum arquivo concluído</span></div>
+                    </div>
+                </div>
+                <div class="section" data-section-id="configuracoes-acoes-api">
+                    <div class="section-header">
+                        <h2>Configurações e Ações</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                      <label for="apiKeySelection">Perfil de Chaves:</label>
+                      <select id="apiKeySelection">
+                        <option value="chave1" selected>Chave 1 (Padrão)</option>
+                        <option value="chave2">Chave 2 (Alternativa)</option>
+                        <option value="intercalar">Intercalar Chaves (Automático)</option>
+                      </select>
+                    </div>
+                    <hr>
+                    <button id="startApiBtn" disabled><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>Iniciar Fila</button>
+                    <button id="resetApiBtn" class="btn-danger"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>Limpar Fila</button>
+                    <p style="margin-top: 20px;"><strong>Status Geral:</strong> <span id="apiStatus">Aguardando</span></p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="apiProgressBarFill"></div>
+                    </div>
+                    <h3 style="margin-top: 20px;">Log da Operação Atual</h3>
+                    <div id="apiLog" class="logs"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="enriquecimento" class="tab-content">
+            <div class="grid" id="enrichmentGrid">
+                <div class="section" data-section-id="estatisticas-banco-dados">
+                    <div class="section-header">
+                        <h2>Estatísticas do Banco de Dados</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <div style="background: var(--bg-dark); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                            <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">Total de CNPJs Enriquecidos:</span>
+                            <span id="enrichedCnpjCount" style="font-size: 24px; font-weight: 700; color: var(--accent-color);">Carregando...</span>
+                        </div>
+                        <button id="refreshCountBtn" style="background: var(--bg-lighter); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; font-size: 12px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                            </svg>
+                            Atualizar
+                        </button>
+                        <button id="downloadEnrichedDataBtn" style="margin-left: 10px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                            </svg>
+                            Baixar Dados Enriquecidos
+                        </button>
+                    </div>
+                </div>
+                <div class="section" data-section-id="alimentar-banco-dados">
+                    <div class="section-header">
+                        <h2>Alimentar Banco de Dados</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        Use esta função para enviar planilhas mestras e popular o banco de dados de enriquecimento.
+                    </p>
+                    <button id="selectMasterFilesBtn">1. Selecionar Planilhas Mestras</button>
+                    <div id="selectedMasterFiles" class="files"></div>
+                    <button id="startLoadToDbBtn">2. Iniciar Carga para o BD</button>
+                    
+                    <div id="dbLoadProgressContainer" style="display: none; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong id="dbLoadProgressTitle">Alimentando Banco de Dados...</strong>
+                            <span id="dbLoadProgressPercent" style="font-size: 14px; color: var(--text-secondary);">0%</span>
+                        </div>
+                        <div class="progress-bar-container" style="height: 16px;">
+                            <div class="progress-bar-fill" id="dbLoadProgressBarFill" style="background: var(--gradient-success);"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--text-secondary);">
+                            <span id="dbLoadProgressText">Preparando...</span>
+                            <span id="dbLoadProgressStats"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section" data-section-id="enriquecer-planilhas">
+                    <div class="section-header">
+                        <h2>Enriquecer Planilhas</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                     <p style="font-size: 14px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;">
+                        Carregue suas listas para adicionar os telefones a partir do banco de dados.
+                    </p>
+                    <button id="selectEnrichFilesBtn">1. Selecionar Arquivos para Enriquecer</button>
+                    <div id="selectedEnrichFiles" class="files"></div>
+                    <div style="margin-top: 15px;">
+                        <label>Estratégia de Preenchimento:</label>
+                        <div class="strategy-group" style="display: inline-block;">
+                           <input type="radio" id="enrichStrategyAppend" name="enrichStrategy" value="append" checked>
+                           <label for="enrichStrategyAppend">Anexar</label>
+                           <input type="radio" id="enrichStrategyOverwrite" name="enrichStrategy" value="overwrite">
+                           <label for="enrichStrategyOverwrite">Sobrescrever</label>
+                           <input type="radio" id="enrichStrategyIgnore" name="enrichStrategy" value="ignore">
+                           <label for="enrichStrategyIgnore">Ignorar</label>
+                        </div>
+                    </div>
+                    <button id="startEnrichmentBtn" style="margin-top: 10px;">2. Iniciar Enriquecimento</button>
+                </div>
+            </div>
+             <div class="section full-width" data-section-id="logs-progresso-enriquecimento">
+                <div class="section-header">
+                    <h2>Logs e Progresso do Enriquecimento</h2>
+                    <div class="section-controls">
+                        <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                        <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                <div id="enrichmentProgressContainer"></div>
+                <div id="enrichmentLog" class="logs">Aguardando início...</div>
+            </div>
+        </div>
+
+        <div id="automacao" class="tab-content">
+            <div class="grid" id="automationGrid">
+                <div class="section full-width" data-section-id="configuracao-automacao">
+                    <div class="section-header">
+                        <h2>Fluxo de Automação Completo ("Executar Tudo")</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                        Execute todas as etapas (Limpeza pela Raiz, Consulta API, Enriquecimento) em uma única operação. As configurações da "Limpeza Local" (como consulta ao BD) serão usadas, exceto pela Lista Raiz, que será sempre a padrão.
+                    </p>
+                    <button id="selectAutomationFileBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>1. Selecionar Arquivo Único</button>
+                    <div id="selectedAutomationFile" class="files"></div>
+                    
+                    <div class="automation-steps-selection" style="margin-top: 20px; padding: 20px; background: var(--bg-dark); border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-secondary);">Selecione as Etapas da Automação:</h3>
+                        <div style="display: flex; justify-content: space-around; gap: 15px;">
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="automation-step-limpeza" checked><span class="slider"></span></label>
+                                <span class="toggle-label">Limpeza Local</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="automation-step-api" checked><span class="slider"></span></label>
+                                <span class="toggle-label">Consulta CNPJ (API)</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <label class="switch"><input type="checkbox" id="automation-step-enriquecimento" checked><span class="slider"></span></label>
+                                <span class="toggle-label">Enriquecimento</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="startAutomationBtn" disabled><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>2. Executar Tudo</button>
+                </div>
+
+                <div class="section full-width" data-section-id="status-automacao">
+                    <div class="section-header">
+                        <h2>Status e Logs da Automação</h2>
+                        <div class="section-controls">
+                            <button class="section-control-btn drag-handle" title="Arrastar">⋮⋮</button>
+                            <button class="section-control-btn hide-section" title="Ocultar">👁</button>
+                        </div>
+                    </div>
+                    
+                    <div id="automationStatusContainer" style="margin-bottom: 20px;">
+                        <h3 id="automationStepTitle" style="color: var(--accent-color); text-align: center; margin-bottom: 10px;">Aguardando Início</h3>
+                        <p id="automationStepMessage" style="color: var(--text-secondary); text-align: center; min-height: 20px;"></p>
+                        <div class="progress-bar-container" style="height: 16px;">
+                            <div class="progress-bar-fill" id="automationProgressBarFill"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="automationLog" class="logs">Aguardando início do processo de automação...</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="renderer.js"></script>
+    <footer>
+        <p>Criador: Davi Abraão | Versão: 2.1</p>
+        <div id="update-message"></div>
+    </footer>
+</body>
+</html>
