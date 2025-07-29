@@ -350,9 +350,27 @@
             min-width: 0;             /* Necessário para o flexbox truncar o texto */
         }
         .detail-list li .count { font-weight: 600; background: var(--bg-card); padding: 2px 8px; border-radius: 6px; color: var(--accent-color);}
+        
+        /* --- AJUSTES DE RESPONSIVIDADE --- */
+        .two-column-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
 
-        @media (max-width: 1200px) { .grid, .monitoring-grid { grid-template-columns: 1fr; gap: 20px; } }
-        @media (max-width: 768px) { body { padding: 12px; } .container { padding: 20px; border-radius: 12px; } h1 { font-size: 1.8rem; } .tabs { flex-direction: column; gap: 2px; } .tab-button { padding: 10px 14px; text-align: left; } }
+        @media (max-width: 1200px) { 
+            .grid, .monitoring-grid, .two-column-tools { 
+                grid-template-columns: 1fr; 
+                gap: 20px; 
+            } 
+        }
+        @media (max-width: 768px) { 
+            body { padding: 12px; } 
+            .container { padding: 20px; border-radius: 12px; } 
+            h1 { font-size: 1.8rem; } 
+            .tabs { flex-direction: column; gap: 2px; } 
+            .tab-button { padding: 10px 14px; text-align: left; } 
+        }
     </style>
 </head>
 <body>
@@ -405,46 +423,51 @@
                             <button class="section-control-btn hide-section" title="Ocultar">👁</button>
                         </div>
                     </div>
-                    <div class="tool-group">
-                        <button id="updateBlocklistBtn">Atualizar Raiz com Blocklist</button>
-                    </div>
-
-                    <div class="tool-group">
-                        <div class="db-options">
-                            <div class="toggle-switch">
-                                <label class="switch"><input type="checkbox" id="checkDbCheckbox"><span class="slider"></span></label>
-                                <span class="toggle-label">Consultar CNPJs no BD</span>
+                    <div class="two-column-tools">
+                        <div class="tool-column">
+                            <div class="tool-group">
+                                <button id="updateBlocklistBtn">Atualizar Raiz com Blocklist</button>
                             </div>
-                            <div class="toggle-switch">
-                                <label class="switch"><input type="checkbox" id="saveToDbCheckbox"><span class="slider"></span></label>
-                                <span class="toggle-label">Salvar novos CNPJs no BD</span>
+        
+                            <div class="tool-group">
+                                <div class="db-options">
+                                    <div class="toggle-switch">
+                                        <label class="switch"><input type="checkbox" id="checkDbCheckbox"><span class="slider"></span></label>
+                                        <span class="toggle-label">Consultar CNPJs no BD</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <label class="switch"><input type="checkbox" id="saveToDbCheckbox"><span class="slider"></span></label>
+                                        <span class="toggle-label">Salvar novos CNPJs no BD</span>
+                                    </div>
+                                </div>
+                                <button id="consultDbBtn">Consulta Apenas pelo BD</button>
+                                <button id="saveStoredCnpjsBtn">Salvar Histórico em Excel</button>
+                            </div>
+        
+                            <div class="tool-group">
+                                <label for="batchIdInput">ID do Lote para Exclusão</label>
+                                <input type="text" id="batchIdInput" placeholder="Cole o ID do lote aqui" style="width: 100%; margin-bottom: 10px;">
+                                <button id="deleteBatchBtn" class="btn-danger">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                       <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                       <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                    </svg>
+                                    Excluir Lote
+                                </button>
                             </div>
                         </div>
-                        <button id="consultDbBtn">Consulta Apenas pelo BD</button>
-                        <button id="saveStoredCnpjsBtn">Salvar Histórico em Excel</button>
-                    </div>
-
-                    <div class="tool-group">
-                        <label for="batchIdInput">ID do Lote para Exclusão</label>
-                        <input type="text" id="batchIdInput" placeholder="Cole o ID do lote aqui" style="width: 100%; margin-bottom: 10px;">
-                        <button id="deleteBatchBtn" class="btn-danger">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                               <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                               <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                            </svg>
-                            Excluir Lote
-                        </button>
-                    </div>
-
-                    <div class="tool-group">
-                        <label><input type="checkbox" id="autoAdjustPhonesCheckbox"> Ajustar Fones Pós-Limpeza</label>
-                        <button id="adjustPhonesBtn">Ajustar Fones (Manual)</button>
-                    </div>
-                    
-                    <div class="tool-group">
-                        <button id="selectMergeFilesBtn">Selecionar Arquivos para Mesclar</button>
-                        <button id="startMergeBtn">Mesclar</button>
-                        <div id="selectedMergeFiles" class="files"></div>
+                        <div class="tool-column">
+                            <div class="tool-group">
+                                <label><input type="checkbox" id="autoAdjustPhonesCheckbox"> Ajustar Fones Pós-Limpeza</label>
+                                <button id="adjustPhonesBtn">Ajustar Fones (Manual)</button>
+                            </div>
+                            
+                            <div class="tool-group">
+                                <button id="selectMergeFilesBtn">Selecionar Arquivos para Mesclar</button>
+                                <button id="startMergeBtn">Mesclar</button>
+                                <div id="selectedMergeFiles" class="files"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

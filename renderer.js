@@ -876,11 +876,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-
+        
+        // --- CÁLCULO DO TMA CORRIGIDO ---
         const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
-        const avgMinutes = Math.floor(avgDurationSeconds / 60);
-        const avgSeconds = Math.round(avgDurationSeconds % 60);
+        const roundedAvgSeconds = Math.round(avgDurationSeconds); // Arredonda o total de segundos primeiro
+        const avgMinutes = Math.floor(roundedAvgSeconds / 60);
+        const avgSeconds = roundedAvgSeconds % 60;
         const tma = `${String(avgMinutes).padStart(2, '0')}:${String(avgSeconds).padStart(2, '0')}`;
+
 
         // --- Renderização do Dashboard ---
         // 1. Cards de Resumo

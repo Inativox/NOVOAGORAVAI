@@ -588,7 +588,7 @@ ipcMain.handle('fetch-monitoring-report', async (event, url) => {
     console.log(`Buscando relatório do endpoint: ${url}`);
     try {
         const response = await axios.get(url, {
-            timeout: 1000000, // 90 segundos
+            timeout: 4000000, // 90 segundos
             headers: {
                 // Adicione o User-Agent do Postman aqui
                 'User-Agent': 'PostmanRuntime/7.44.1' // Use o valor exato que você viu no console do Postman
