@@ -16,8 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const gridConfigs = {
         'localGrid': 'local-sections',
-        'apiGrid': 'api-sections', 
-        'enrichmentGrid': 'enrichment-sections'
+        'apiGrid': 'api-sections',
+        'enrichmentGrid': 'enrichment-sections',
+        'monitoringGrid': 'monitoring-sections' // Adicionado para a nova aba
     };
 
     let sortableInstances = {};
@@ -120,9 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Enriquecimento de Dados',
             description: 'Amplie suas bases com informações valiosas, como telefones e outros dados de contato, a partir de fontes confiáveis. Maximize o potencial de suas campanhas.'
         },
-        'Automação': {
-            title: 'Fluxo de Automação "Executar Tudo"',
-            description: 'Combine todas as etapas de tratamento de bases em um único processo. Limpe, consulte e enriqueça seus dados com um único clique.'
+        'Monitoramento': {
+            title: 'Monitoramento de Relatórios',
+            description: 'Acompanhe os dados de chamadas em tempo real. Filtre e visualize informações para análise de performance e tomada de decisão.'
         }
     };
 
@@ -146,15 +147,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const body = document.body;
-        body.classList.remove('c6-theme', 'enrichment-theme', 'automation-theme');
+        body.classList.remove('c6-theme', 'enrichment-theme', 'monitoring-theme');
         if (tabNameId === 'api') {
             body.classList.add('c6-theme');
         } else if (tabNameId === 'enriquecimento') {
             body.classList.add('enrichment-theme');
-        } else if (tabNameId === 'automacao') {
-            body.classList.add('automation-theme');
+        } else if (tabNameId === 'monitoramento') {
+            body.classList.add('monitoring-theme');
         }
-
 
         const tabButtonText = evt ? evt.currentTarget.textContent.trim() : tabButtons[0].textContent.trim();
         if (tabInfo[tabButtonText]) {
@@ -179,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tabNameId = 'api';
             } else if (buttonText.includes('Enriquecimento')) {
                 tabNameId = 'enriquecimento';
-            } else if (buttonText.includes('Automação')) {
-                tabNameId = 'automacao';
+            } else if (buttonText.includes('Monitoramento')) {
+                tabNameId = 'monitoramento';
             }
 
             if (tabNameId) {
@@ -192,6 +192,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabButtons.length > 0) {
         tabButtons[0].click();
     }
+
+    // #################################################################
+    // #           LÓGICA DA ABA DE LIMPEZA LOCAL E OUTRAS             #
+    // #################################################################
 
     let rootFile             = null;
     let cleanFiles           = [];
@@ -668,124 +672,263 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // #################################################################
-    // #           NOVA LÓGICA PARA A ABA DE AUTOMAÇÃO COMPLETA        #
+    // #           NOVA LÓGICA PARA A ABA DE MONITORAMENTO             #
     // #################################################################
-    
-    gridConfigs['automationGrid'] = 'automation-sections';
-    initializeSortable('automationGrid', 'automation-sections');
 
-    const selectAutomationFileBtn = document.getElementById('selectAutomationFileBtn');
-    const selectedAutomationFileDiv = document.getElementById('selectedAutomationFile');
-    const startAutomationBtn = document.getElementById('startAutomationBtn');
-    const automationLog = document.getElementById('automationLog');
-    const automationStepTitle = document.getElementById('automationStepTitle');
-    const automationStepMessage = document.getElementById('automationStepMessage');
-    const automationProgressBarFill = document.getElementById('automationProgressBarFill');
+    const apiParametersContainer = document.getElementById('api-parameters');
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const monitoringLog = document.getElementById('monitoring-log');
+    const dashboardSummary = document.getElementById('dashboard-summary');
+    const dashboardDetails = document.getElementById('dashboard-details');
+    const dataInicioInput = document.getElementById('data_inicio_monitor');
+    const dataFimInput = document.getElementById('data_fim_monitor');
+    const monitoringSearchInput = document.getElementById('monitoringSearchInput');
 
-    let automationFilePath = null;
+    const apiParams = [
+        { name: 'id', label: 'Call ID' },
+        { name: 'nome', label: 'Nome Cliente' },
+        { name: 'chave', label: 'Chave' },
+        { name: 'cpf', label: 'CPF' },
+        { name: 'operador_id', label: 'ID Operador' },
+        { name: 'fone_origem', label: 'Fone Origem' },
+        { name: 'fone_destino', label: 'Fone Destino' },
+        { name: 'sentido', label: 'Sentido' },
+        { name: 'tronco_id', label: 'ID Tronco' },
+        { name: 'digitado', label: 'Digitado' },
+        { name: 'resultado', label: 'Resultado' },
+        { name: 'tabulacao_id', label: 'ID Tabulação' },
+        { name: 'operacao_id', label: 'ID Operação' },
+        { name: 'tipoServico', label: 'Tipo Serviço' },
+        { name: 'grupo_operador_id', label: 'ID Grupo Operador' },
+    ];
 
-    function resetAutomationUI() {
-        startAutomationBtn.disabled = true;
-        startAutomationBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>2. Executar Tudo`;
-        automationStepTitle.textContent = 'Aguardando Início';
-        automationStepMessage.textContent = '';
-        automationProgressBarFill.style.width = '0%';
-    }
+    // Popula a área de parâmetros dinamicamente
+    apiParametersContainer.innerHTML = apiParams.map(param => `
+        <div class="param-item">
+            <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
+            <label for="check-${param.name}">${param.label}</label>
+            <input type="text" id="input-${param.name}" class="hidden" placeholder="Valor para ${param.label}">
+        </div>
+    `).join('');
 
-    selectAutomationFileBtn.addEventListener('click', async () => {
-        const files = await window.electronAPI.selectFile({ title: 'Selecione a planilha para o fluxo completo', multi: false });
-        if (files && files.length > 0) {
-            automationFilePath = files[0];
-            addFileToUI(selectedAutomationFileDiv, automationFilePath, true);
-            
-            automationStepTitle.textContent = 'Aguardando Início';
-            automationStepMessage.textContent = 'Pronto para executar.';
-            automationLog.innerHTML = `> Arquivo selecionado: ${getBasename(automationFilePath)}\n> Pronto para iniciar a automação.`;
-
-            startAutomationBtn.disabled = false;
-        }
-    });
-
-    startAutomationBtn.addEventListener('click', () => {
-        if (!automationFilePath) {
-            return alert('Por favor, selecione um arquivo para automatizar.');
-        }
-
-        const isAutoRoot = autoRootBtn.dataset.on === 'true';
-        if (!isAutoRoot && !rootFile) {
-            return alert("Por favor, selecione ou configure um 'Arquivo Raiz' na aba 'Limpeza Local' antes de executar a automação.");
-        }
-        
-        startAutomationBtn.disabled = true;
-        automationLog.innerHTML = '';
-        automationStepTitle.textContent = 'Iniciando Automação';
-        automationStepMessage.textContent = 'Preparando para executar o fluxo...';
-        
-        const steps = {
-            limpeza: document.getElementById('automation-step-limpeza').checked,
-            api: document.getElementById('automation-step-api').checked,
-            enriquecimento: document.getElementById('automation-step-enriquecimento').checked
-        };
-
-        if (!steps.limpeza && !steps.api && !steps.enriquecimento) {
-            alert("Por favor, selecione pelo menos uma etapa para a automação.");
-            startAutomationBtn.disabled = false;
-            return;
-        }
-
-        const settings = {
-            checkDb: document.getElementById('checkDbCheckbox').checked,
-            saveToDb: document.getElementById('saveToDbCheckbox').checked,
-            backup: document.getElementById('backupCheckbox').checked,
-            autoAdjust: document.getElementById('autoAdjustPhonesCheckbox').checked,
-            destCol: document.getElementById('destCol').value,
-            rootCol: document.getElementById('rootCol').value,
-            apiKeyMode: document.getElementById('apiKeySelection').value,
-            enrichStrategy: document.querySelector('input[name="enrichStrategy"]:checked').value,
-            rootFilePath: isAutoRoot ? null : rootFile
-        };
-
-        window.electronAPI.startFullAutomation({ 
-            filePath: automationFilePath, 
-            settings: settings, 
-            steps: steps,
-            isAutoRoot: isAutoRoot
+    // Adiciona event listeners para os checkboxes dos parâmetros
+    apiParams.forEach(param => {
+        const checkbox = document.getElementById(`check-${param.name}`);
+        const input = document.getElementById(`input-${param.name}`);
+        checkbox.addEventListener('change', () => {
+            input.classList.toggle('hidden', !checkbox.checked);
+            if (!checkbox.checked) {
+                input.value = '';
+            }
         });
     });
 
-
-    function appendAutomationLog(msg) {
-        if (automationLog.textContent.startsWith('Aguardando início')) {
-            automationLog.innerHTML = '';
-        }
-        automationLog.innerHTML += `> ${msg.replace(/\n/g, '<br>> ')}\n`;
-        automationLog.scrollTop = automationLog.scrollHeight;
+    // Adiciona event listener para a barra de pesquisa de Fone Destino
+    if (monitoringSearchInput) {
+        const foneDestinoCheckbox = document.getElementById('check-fone_destino');
+        const foneDestinoInput = document.getElementById('input-fone_destino');
+        
+        monitoringSearchInput.addEventListener('input', () => {
+            const searchTerm = monitoringSearchInput.value.trim();
+            if (foneDestinoInput) {
+                foneDestinoInput.value = searchTerm;
+            }
+            if (foneDestinoCheckbox) {
+                // Ativa o filtro automaticamente quando o usuário digita
+                if (searchTerm) {
+                    if (!foneDestinoCheckbox.checked) {
+                        foneDestinoCheckbox.checked = true;
+                    }
+                    if (foneDestinoInput.classList.contains('hidden')) {
+                        foneDestinoInput.classList.remove('hidden');
+                    }
+                }
+            }
+        });
     }
 
-    window.electronAPI.onAutomationLog((msg) => {
-        appendAutomationLog(msg);
+    // Função para formatar data para o formato yyyy-mm-dd (usado pelo input type="date")
+    const getHtmlDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // Função para formatar data para o formato dd/mm/yyyy (usado pela API)
+    const getApiDate = (dateString) => {
+        if (!dateString) return '';
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
+    // Lógica para os botões de filtro de data
+    document.querySelectorAll('.date-filter-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const period = e.target.dataset.period;
+            const today = new Date();
+            let startDate, endDate = new Date();
+
+            switch (period) {
+                case 'today':
+                    startDate = today;
+                    endDate = today;
+                    break;
+                case 'yesterday':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 1);
+                    endDate = startDate;
+                    break;
+                case 'this_week':
+                    startDate = new Date(today);
+                    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday...
+                    startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)); // Adjust to Monday
+                    endDate = today;
+                    break;
+                case 'last_week':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - today.getDay() - 6);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    break;
+                case 'this_month':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = today;
+                    break;
+            }
+
+            dataInicioInput.value = getHtmlDate(startDate);
+            dataFimInput.value = getHtmlDate(endDate);
+        });
     });
 
-    window.electronAPI.onAutomationStepUpdate(({ step, title, message, progress }) => {
-        automationStepTitle.textContent = `Etapa: ${title}`;
-        automationStepMessage.textContent = message;
-        automationProgressBarFill.style.width = `${progress}%`;
-    });
+    // Lógica principal para gerar o relatório
+    generateReportBtn.addEventListener('click', async () => {
+        generateReportBtn.disabled = true;
+        monitoringLog.innerHTML = '> 🌀 Gerando relatório... Por favor, aguarde.';
+        dashboardSummary.innerHTML = '';
+        dashboardDetails.innerHTML = '';
 
-    window.electronAPI.onAutomationFinished(({ success, message, finalPath }) => {
-        startAutomationBtn.disabled = false;
-        appendAutomationLog(message);
+        let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
+        
+        let params = [];
+        apiParams.forEach(param => {
+            const checkbox = document.getElementById(`check-${param.name}`);
+            if (checkbox.checked) {
+                const input = document.getElementById(`input-${param.name}`);
+                params.push(`${param.name}=${encodeURIComponent(input.value)}`);
+            } else {
+                 params.push(`${param.name}=`);
+            }
+        });
 
-        if (success) {
-            automationStepTitle.textContent = 'Automação Concluída!';
-            automationStepMessage.textContent = 'Processo finalizado com sucesso.';
-            automationLog.innerHTML += `<br><button id="openFinalFileBtn" data-path="${finalPath}">Abrir Arquivo Final</button>`;
-            document.getElementById('openFinalFileBtn').addEventListener('click', (e) => {
-                window.electronAPI.openPath(e.target.dataset.path);
-            });
+        // Adiciona parâmetros de data
+        params.push(`data_inicio=${getApiDate(dataInicioInput.value)}`);
+        params.push(`data_fim=${getApiDate(dataFimInput.value)}`);
+        params.push('formato=json');
+
+        const finalUrl = baseUrl + params.join('&');
+
+        const result = await window.electronAPI.fetchMonitoringReport(finalUrl);
+
+        if (result.success && result.data) {
+            updateDashboard(result.data);
+            monitoringLog.innerHTML = `> ✅ Relatório gerado com sucesso. ${result.data.length} registros encontrados.`;
         } else {
-            automationStepTitle.textContent = 'Erro na Automação';
-            automationStepMessage.textContent = 'Ocorreu um erro. Verifique os logs.';
+            monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API. Verifique a console para mais detalhes.'}`;
         }
+
+        generateReportBtn.disabled = false;
     });
+
+    // Função para atualizar o dashboard com os dados
+    function updateDashboard(data) {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            dashboardSummary.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1;">Nenhum dado retornado para os filtros selecionados.</p>';
+            dashboardDetails.innerHTML = '';
+            return;
+        }
+
+        // --- Agregação de Dados ---
+        const totalCalls = data.length;
+        const aggregators = {
+            tabulacao: {},
+            resultado: {},
+            nome_operador: {},
+            nome_campanha: {},
+            sentido: {},
+            origem: {},
+        };
+
+        let totalDurationSeconds = 0;
+
+        data.forEach(item => {
+            for (const key in aggregators) {
+                const value = item[key] || 'Não Preenchido';
+                aggregators[key][value] = (aggregators[key][value] || 0) + 1;
+            }
+            // Soma a duração das ligações
+            if (item.tempo_ligacao) {
+                const parts = item.tempo_ligacao.split(':');
+                if (parts.length === 3) {
+                    totalDurationSeconds += parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+                }
+            }
+        });
+        
+        const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
+        const avgMinutes = Math.floor(avgDurationSeconds / 60);
+        const avgSeconds = Math.round(avgDurationSeconds % 60);
+        const tma = `${String(avgMinutes).padStart(2, '0')}:${String(avgSeconds).padStart(2, '0')}`;
+
+        // --- Renderização do Dashboard ---
+        // 1. Cards de Resumo
+        dashboardSummary.innerHTML = `
+            <div class="summary-card">
+                <div class="summary-card-title">Total de Chamadas</div>
+                <div class="summary-card-value">${totalCalls.toLocaleString('pt-BR')}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-title">TMA</div>
+                <div class="summary-card-value">${tma}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-title">Resultados Únicos</div>
+                <div class="summary-card-value">${Object.keys(aggregators.resultado).length}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-title">Tabulações Únicas</div>
+                <div class="summary-card-value">${Object.keys(aggregators.tabulacao).length}</div>
+            </div>
+        `;
+
+        // 2. Cards de Detalhes
+        dashboardDetails.innerHTML = ''; // Limpa detalhes antigos
+
+        const createDetailCard = (title, dataObject) => {
+            // Ordena os dados por contagem (descendente)
+            const sortedData = Object.entries(dataObject).sort(([,a],[,b]) => b - a);
+            
+            let listItems = sortedData.map(([name, count]) => `
+                <li>
+                    <span class="name" title="${name}">${name}</span>
+                    <span class="count">${count.toLocaleString('pt-BR')}</span>
+                </li>
+            `).join('');
+            
+            if (!listItems) listItems = '<li>Nenhum dado.</li>';
+
+            return `
+                <div class="detail-card">
+                    <h3>${title}</h3>
+                    <ul class="detail-list">${listItems}</ul>
+                </div>
+            `;
+        }
+
+        dashboardDetails.innerHTML += createDetailCard('Top Tabulações', aggregators.tabulacao);
+        dashboardDetails.innerHTML += createDetailCard('Resultados', aggregators.resultado);
+        dashboardDetails.innerHTML += createDetailCard('Top Operadores', aggregators.nome_operador);
+        dashboardDetails.innerHTML += createDetailCard('Campanhas', aggregators.nome_campanha);
+    }
 });

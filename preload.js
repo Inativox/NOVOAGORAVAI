@@ -29,8 +29,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startDbLoad: (args) => ipcRenderer.send("start-db-load", args),
   startEnrichment: (args) => ipcRenderer.send("start-enrichment", args),
 
-  // Funções de Automação Completa
-  startFullAutomation: (options) => ipcRenderer.send('start-full-automation', options),
+  // NOVA FUNÇÃO DE MONITORAMENTO
+  fetchMonitoringReport: (url) => ipcRenderer.invoke('fetch-monitoring-report', url),
 
   // Listeners de eventos (para receber dados do main)
   onLog: (callback) => ipcRenderer.on("log", (event, ...args) => callback(...args)),
@@ -46,9 +46,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onEnrichmentFinished: (callback) => ipcRenderer.on("enrichment-finished", (event, ...args) => callback(...args)),
   onUpdateMessage: (callback) => ipcRenderer.on("update-message", (event, ...args) => callback(...args)),
   onRootFeedFinished: (callback) => ipcRenderer.on('root-feed-finished', (event, ...args) => callback(...args)),
-  onAutomationLog: (callback) => ipcRenderer.on('automation-log', (event, ...args) => callback(...args)),
-  onAutomationStepUpdate: (callback) => ipcRenderer.on('automation-step-update', (event, ...args) => callback(...args)),
-  onAutomationFinished: (callback) => ipcRenderer.on('automation-finished', (event, ...args) => callback(...args)),
 
   // Função para remover todos os listeners para evitar memory leaks ao recarregar
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
