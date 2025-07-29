@@ -38,9 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applySectionState(grid, state) {
         if (!state) return;
-        
+
         const sections = Array.from(grid.querySelectorAll('.section'));
-        
+
         state.forEach((savedSection, index) => {
             const section = sections.find(s => s.dataset.sectionId === savedSection.id);
             if (section) {
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chosenClass: 'sortable-chosen',
             dragClass: 'sortable-drag',
             handle: '.drag-handle',
-            onEnd: function(evt) {
+            onEnd: function (evt) {
                 const sections = Array.from(grid.querySelectorAll('.section'));
                 saveSectionState(storageKey, sections);
             }
@@ -84,11 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sortableInstances[gridId] = sortable;
 
-        grid.addEventListener('click', function(e) {
+        grid.addEventListener('click', function (e) {
             if (e.target.classList.contains('hide-section')) {
                 const section = e.target.closest('.section');
                 const isHidden = section.classList.contains('hidden');
-                
+
                 if (isHidden) {
                     section.classList.remove('hidden');
                     e.target.textContent = '👁';
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', (event) => {
             const buttonText = event.currentTarget.textContent.trim();
             let tabNameId = '';
-            
+
             if (buttonText.includes('Local')) {
                 tabNameId = 'local';
             } else if (buttonText.includes('API')) {
@@ -197,44 +197,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // #           LÓGICA DA ABA DE LIMPEZA LOCAL E OUTRAS             #
     // #################################################################
 
-    let rootFile             = null;
-    let cleanFiles           = [];
-    let mergeFiles           = [];
-    let backupEnabled        = false;
-    let autoAdjustPhones     = false;
-    let checkDbEnabled       = false;
-    let saveToDbEnabled      = false;
+    let rootFile = null;
+    let cleanFiles = [];
+    let mergeFiles = [];
+    let backupEnabled = false;
+    let autoAdjustPhones = false;
+    let checkDbEnabled = false;
+    let saveToDbEnabled = false;
 
-    const selectRootBtn           = document.getElementById('selectRootBtn');
-    const autoRootBtn             = document.getElementById('autoRootBtn');
-    const feedRootBtn             = document.getElementById('feedRootBtn');
-    const updateBlocklistBtn      = document.getElementById('updateBlocklistBtn');
-    const addCleanFileBtn         = document.getElementById('addCleanFileBtn');
-    const startCleaningBtn        = document.getElementById('startCleaningBtn');
-    const resetLocalBtn           = document.getElementById('resetLocalBtn');
-    const adjustPhonesBtn         = document.getElementById('adjustPhonesBtn');
-    const backupCheckbox          = document.getElementById('backupCheckbox');
-    const autoAdjustPhonesCheckbox= document.getElementById('autoAdjustPhonesCheckbox');
-    const rootFilePathSpan        = document.getElementById('rootFilePath');
-    const selectedCleanFilesDiv   = document.getElementById('selectedCleanFiles');
-    const progressContainer       = document.getElementById('progressContainer');
-    const logDiv                  = document.getElementById('log');
-    const rootColSelect           = document.getElementById('rootCol');
-    const destColSelect           = document.getElementById('destCol');
-    const selectMergeFilesBtn     = document.getElementById('selectMergeFilesBtn');
-    const startMergeBtn           = document.getElementById('startMergeBtn');
-    const selectedMergeFilesDiv   = document.getElementById('selectedMergeFiles');
-    const saveStoredCnpjsBtn      = document.getElementById('saveStoredCnpjsBtn');
-    const checkDbCheckbox         = document.getElementById('checkDbCheckbox');
-    const saveToDbCheckbox        = document.getElementById('saveToDbCheckbox');
-    const consultDbBtn            = document.getElementById('consultDbBtn');
+    const selectRootBtn = document.getElementById('selectRootBtn');
+    const autoRootBtn = document.getElementById('autoRootBtn');
+    const feedRootBtn = document.getElementById('feedRootBtn');
+    const updateBlocklistBtn = document.getElementById('updateBlocklistBtn');
+    const addCleanFileBtn = document.getElementById('addCleanFileBtn');
+    const startCleaningBtn = document.getElementById('startCleaningBtn');
+    const resetLocalBtn = document.getElementById('resetLocalBtn');
+    const adjustPhonesBtn = document.getElementById('adjustPhonesBtn');
+    const backupCheckbox = document.getElementById('backupCheckbox');
+    const autoAdjustPhonesCheckbox = document.getElementById('autoAdjustPhonesCheckbox');
+    const rootFilePathSpan = document.getElementById('rootFilePath');
+    const selectedCleanFilesDiv = document.getElementById('selectedCleanFiles');
+    const progressContainer = document.getElementById('progressContainer');
+    const logDiv = document.getElementById('log');
+    const rootColSelect = document.getElementById('rootCol');
+    const destColSelect = document.getElementById('destCol');
+    const selectMergeFilesBtn = document.getElementById('selectMergeFilesBtn');
+    const startMergeBtn = document.getElementById('startMergeBtn');
+    const selectedMergeFilesDiv = document.getElementById('selectedMergeFiles');
+    const saveStoredCnpjsBtn = document.getElementById('saveStoredCnpjsBtn');
+    const checkDbCheckbox = document.getElementById('checkDbCheckbox');
+    const saveToDbCheckbox = document.getElementById('saveToDbCheckbox');
+    const consultDbBtn = document.getElementById('consultDbBtn');
     const uploadProgressContainer = document.getElementById('uploadProgressContainer');
-    const uploadProgressTitle     = document.getElementById('uploadProgressTitle');
-    const uploadProgressBarFill   = document.getElementById('uploadProgressBarFill');
-    const uploadProgressText      = document.getElementById('uploadProgressText');
-    const batchIdInput            = document.getElementById('batchIdInput');
-    const deleteBatchBtn          = document.getElementById('deleteBatchBtn');
-    
+    const uploadProgressTitle = document.getElementById('uploadProgressTitle');
+    const uploadProgressBarFill = document.getElementById('uploadProgressBarFill');
+    const uploadProgressText = document.getElementById('uploadProgressText');
+    const batchIdInput = document.getElementById('batchIdInput');
+    const deleteBatchBtn = document.getElementById('deleteBatchBtn');
+
     function addFileToUI(container, filePath, isSingle) {
         if (isSingle) {
             container.innerHTML = '';
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appendLog(`Enviando solicitação para excluir o lote: ${batchId}...`);
             const result = await window.electronAPI.deleteBatch(batchId);
             appendLog(result.message);
-            if(result.success) {
+            if (result.success) {
                 batchIdInput.value = '';
             }
         } else {
@@ -306,120 +306,120 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     selectRootBtn.addEventListener('click', async () => {
-      const files = await window.electronAPI.selectFile({ title: 'Selecione a Lista Raiz', multi: false });
-      if (files && files.length > 0) {
-        rootFile = files[0];
-        addFileToUI(rootFilePathSpan, rootFile, true);
-        appendLog(`Arquivo raiz selecionado: ${rootFile}`);
-      }
+        const files = await window.electronAPI.selectFile({ title: 'Selecione a Lista Raiz', multi: false });
+        if (files && files.length > 0) {
+            rootFile = files[0];
+            addFileToUI(rootFilePathSpan, rootFile, true);
+            appendLog(`Arquivo raiz selecionado: ${rootFile}`);
+        }
     });
 
     autoRootBtn.addEventListener('click', () => {
-      if (autoRootBtn.dataset.on) {
-        delete autoRootBtn.dataset.on;
-        autoRootBtn.textContent = "Auto Raiz: OFF";
-        rootFile = null;
-        rootFilePathSpan.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Usará arquivo local selecionado</span>';
-        selectRootBtn.disabled = false;
-      } else {
-        autoRootBtn.dataset.on = 'true';
-        autoRootBtn.textContent = "Auto Raiz: ON";
-        rootFile = null; // Limpa o arquivo, pois usará o BD
-        rootFilePathSpan.innerHTML = '<span style="color:var(--accent-light); font-weight: 600;">Usará a base de dados Raiz</span>';
-        selectRootBtn.disabled = true;
-      }
-      appendLog(`Auto Raiz: ${autoRootBtn.dataset.on ? 'ON (usando Banco de Dados)' : 'OFF'}`);
+        if (autoRootBtn.dataset.on) {
+            delete autoRootBtn.dataset.on;
+            autoRootBtn.textContent = "Auto Raiz: OFF";
+            rootFile = null;
+            rootFilePathSpan.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">Usará arquivo local selecionado</span>';
+            selectRootBtn.disabled = false;
+        } else {
+            autoRootBtn.dataset.on = 'true';
+            autoRootBtn.textContent = "Auto Raiz: ON";
+            rootFile = null; // Limpa o arquivo, pois usará o BD
+            rootFilePathSpan.innerHTML = '<span style="color:var(--accent-light); font-weight: 600;">Usará a base de dados Raiz</span>';
+            selectRootBtn.disabled = true;
+        }
+        appendLog(`Auto Raiz: ${autoRootBtn.dataset.on ? 'ON (usando Banco de Dados)' : 'OFF'}`);
     });
 
     updateBlocklistBtn.addEventListener('click', async () => {
-      const result = await window.electronAPI.updateBlocklist(backupEnabled);
-      appendLog(result.success ? result.message : `Erro: ${result.message}`);
+        const result = await window.electronAPI.updateBlocklist(backupEnabled);
+        appendLog(result.success ? result.message : `Erro: ${result.message}`);
     });
 
     addCleanFileBtn.addEventListener('click', async () => {
-      const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para limpar', multi: true });
-      if (!files?.length) return;
-      cleanFiles = [];
-      selectedCleanFilesDiv.innerHTML = '';
-      progressContainer.innerHTML = '';
-      files.forEach(file => {
-        const id = `clean-${cleanFiles.length}`;
-        cleanFiles.push({ path: file, id });
-        appendLog(`Adicionado para limpeza: ${file}`);
-        addFileToUI(selectedCleanFilesDiv, file, false);
-        progressContainer.innerHTML += `<div class="file-progress" style="margin-bottom: 15px;"><strong>${getBasename(file)}</strong><div class="progress-bar-container"><div class="progress-bar-fill" id="${id}"></div></div></div>`;
-      });
+        const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para limpar', multi: true });
+        if (!files?.length) return;
+        cleanFiles = [];
+        selectedCleanFilesDiv.innerHTML = '';
+        progressContainer.innerHTML = '';
+        files.forEach(file => {
+            const id = `clean-${cleanFiles.length}`;
+            cleanFiles.push({ path: file, id });
+            appendLog(`Adicionado para limpeza: ${file}`);
+            addFileToUI(selectedCleanFilesDiv, file, false);
+            progressContainer.innerHTML += `<div class="file-progress" style="margin-bottom: 15px;"><strong>${getBasename(file)}</strong><div class="progress-bar-container"><div class="progress-bar-fill" id="${id}"></div></div></div>`;
+        });
     });
 
     startCleaningBtn.addEventListener('click', () => {
-      const isAutoRoot = autoRootBtn.dataset.on === 'true';
-      if (!isAutoRoot && !rootFile) {
-        return appendLog('ERRO: Selecione o arquivo raiz ou ative o Auto Raiz.');
-      }
-      if (!cleanFiles.length) {
-        return appendLog('ERRO: Adicione ao menos um arquivo para limpar.');
-      }
-      
-      resetUploadProgress();
-      appendLog('Iniciando limpeza...');
-      window.electronAPI.startCleaning({
-        isAutoRoot,
-        rootFile: isAutoRoot ? null : rootFile,
-        cleanFiles,
-        rootCol: rootColSelect.value,
-        destCol: destColSelect.value,
-        backup: backupEnabled,
-        checkDb: checkDbEnabled,
-        saveToDb: saveToDbEnabled,
-        autoAdjust: autoAdjustPhones
-      });
+        const isAutoRoot = autoRootBtn.dataset.on === 'true';
+        if (!isAutoRoot && !rootFile) {
+            return appendLog('ERRO: Selecione o arquivo raiz ou ative o Auto Raiz.');
+        }
+        if (!cleanFiles.length) {
+            return appendLog('ERRO: Adicione ao menos um arquivo para limpar.');
+        }
+
+        resetUploadProgress();
+        appendLog('Iniciando limpeza...');
+        window.electronAPI.startCleaning({
+            isAutoRoot,
+            rootFile: isAutoRoot ? null : rootFile,
+            cleanFiles,
+            rootCol: rootColSelect.value,
+            destCol: destColSelect.value,
+            backup: backupEnabled,
+            checkDb: checkDbEnabled,
+            saveToDb: saveToDbEnabled,
+            autoAdjust: autoAdjustPhones
+        });
     });
 
     resetLocalBtn.addEventListener('click', () => {
-      rootFile = null;
-      cleanFiles = [];
-      mergeFiles = [];
-      backupEnabled = false;
-      autoAdjustPhones = false;
-      checkDbEnabled = false;
-      saveToDbEnabled = false;
-      rootFilePathSpan.innerHTML = '';
-      selectedCleanFilesDiv.innerHTML = '';
-      progressContainer.innerHTML = '';
-      logDiv.textContent = '';
-      selectedMergeFilesDiv.innerHTML = '';
-      batchIdInput.value = '';
-      backupCheckbox.checked = false;
-      autoAdjustPhonesCheckbox.checked = false;
-      checkDbCheckbox.checked = false;
-      saveToDbCheckbox.checked = false;
-      delete autoRootBtn.dataset.on;
-      autoRootBtn.textContent = 'Auto Raiz: OFF';
-      selectRootBtn.disabled = false;
-      resetUploadProgress();
-      appendLog('Módulo de Limpeza Local reiniciado.');
+        rootFile = null;
+        cleanFiles = [];
+        mergeFiles = [];
+        backupEnabled = false;
+        autoAdjustPhones = false;
+        checkDbEnabled = false;
+        saveToDbEnabled = false;
+        rootFilePathSpan.innerHTML = '';
+        selectedCleanFilesDiv.innerHTML = '';
+        progressContainer.innerHTML = '';
+        logDiv.textContent = '';
+        selectedMergeFilesDiv.innerHTML = '';
+        batchIdInput.value = '';
+        backupCheckbox.checked = false;
+        autoAdjustPhonesCheckbox.checked = false;
+        checkDbCheckbox.checked = false;
+        saveToDbCheckbox.checked = false;
+        delete autoRootBtn.dataset.on;
+        autoRootBtn.textContent = 'Auto Raiz: OFF';
+        selectRootBtn.disabled = false;
+        resetUploadProgress();
+        appendLog('Módulo de Limpeza Local reiniciado.');
     });
 
     adjustPhonesBtn.addEventListener('click', async () => {
-      const files = await window.electronAPI.selectFile({ title: 'Selecione arquivo para ajustar fones', multi: false });
-      if (!files?.length) return appendLog('Nenhum arquivo selecionado.');
-      window.electronAPI.startAdjustPhones({ filePath: files[0], backup: backupEnabled });
+        const files = await window.electronAPI.selectFile({ title: 'Selecione arquivo para ajustar fones', multi: false });
+        if (!files?.length) return appendLog('Nenhum arquivo selecionado.');
+        window.electronAPI.startAdjustPhones({ filePath: files[0], backup: backupEnabled });
     });
 
     selectMergeFilesBtn.addEventListener('click', async () => {
-      const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para mesclar', multi: true });
-      if (!files?.length) return;
-      mergeFiles = files;
-      selectedMergeFilesDiv.innerHTML = '';
-      files.forEach(f => {
-        addFileToUI(selectedMergeFilesDiv, f, false);
-      });
+        const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para mesclar', multi: true });
+        if (!files?.length) return;
+        mergeFiles = files;
+        selectedMergeFilesDiv.innerHTML = '';
+        files.forEach(f => {
+            addFileToUI(selectedMergeFilesDiv, f, false);
+        });
     });
 
     startMergeBtn.addEventListener('click', () => {
-      if (!mergeFiles.length) return appendLog('ERRO: Selecione arquivos para mesclar.');
-      appendLog('Iniciando mesclagem...');
-      window.electronAPI.startMerge(mergeFiles);
+        if (!mergeFiles.length) return appendLog('ERRO: Selecione arquivos para mesclar.');
+        appendLog('Iniciando mesclagem...');
+        window.electronAPI.startMerge(mergeFiles);
     });
 
     feedRootBtn.addEventListener('click', async () => {
@@ -442,8 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.electronAPI.onLog((msg) => appendLog(msg));
     window.electronAPI.onProgress(({ id, progress }) => {
-      const bar = document.getElementById(id);
-      if (bar) bar.style.width = `${progress}%`;
+        const bar = document.getElementById(id);
+        if (bar) bar.style.width = `${progress}%`;
     });
     window.electronAPI.onUploadProgress(({ current, total }) => {
         uploadProgressContainer.style.display = 'block';
@@ -475,18 +475,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiStatusSpan = document.getElementById('apiStatus');
     const apiProgressBarFill = document.getElementById('apiProgressBarFill');
     const apiLogDiv = document.getElementById('apiLog');
-    
+
     apiDropzone.addEventListener('dragover', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--accent-color)'; apiDropzone.style.backgroundColor = 'var(--bg-lighter)'; });
     apiDropzone.addEventListener('dragleave', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; });
     apiDropzone.addEventListener('drop', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; const files = Array.from(event.dataTransfer.files).filter(file => file.path.endsWith('.xlsx') || file.path.endsWith('.xls') || file.path.endsWith('.csv')).map(file => file.path); if (files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
-    
+
     selectApiFileBtn.addEventListener('click', async () => { const files = await window.electronAPI.selectFile({ title: 'Selecione as planilhas de CNPJs', multi: true }); if (files && files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
     startApiBtn.addEventListener('click', () => { startApiBtn.disabled = true; resetApiBtn.disabled = true; apiStatusSpan.textContent = 'Iniciando processamento da fila...'; window.electronAPI.startApiQueue({ keyMode: apiKeySelection.value }); });
     resetApiBtn.addEventListener('click', () => { window.electronAPI.resetApiQueue(); });
-    
-    function updateApiQueueUI(queue) { 
-        const { pending, processing, completed } = queue; 
-        
+
+    function updateApiQueueUI(queue) {
+        const { pending, processing, completed } = queue;
+
         apiProcessingDiv.innerHTML = processing ? '' : `<span style="color:var(--text-secondary)">Nenhum</span>`;
         if (processing) addFileToUI(apiProcessingDiv, processing, true);
 
@@ -495,14 +495,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         apiCompletedDiv.innerHTML = completed.length > 0 ? '' : `<span style="color:var(--text-secondary)">Nenhum arquivo concluído</span>`;
         if (completed.length > 0) completed.forEach(file => addFileToUI(apiCompletedDiv, file, false));
-        
-        startApiBtn.disabled = pending.length === 0 || !!processing; 
+
+        startApiBtn.disabled = pending.length === 0 || !!processing;
     }
-    
+
     window.electronAPI.onApiQueueUpdate((queue) => { updateApiQueueUI(queue); if (!queue.processing && queue.pending.length === 0 && queue.completed.length > 0) { apiStatusSpan.textContent = 'Fila concluída!'; resetApiBtn.disabled = false; } });
     window.electronAPI.onApiLog((message) => { appendApiLog(message); });
     window.electronAPI.onApiProgress(({ current, total }) => { const percent = Math.round((current / total) * 100); apiProgressBarFill.style.width = `${percent}%`; apiStatusSpan.textContent = `Processando Lote ${current} de ${total}`; });
-    
+
     function appendApiLog(msg) { apiLogDiv.innerHTML += `> ${msg.replace(/\n/g, '<br>> ')}\n`; apiLogDiv.scrollTop = apiLogDiv.scrollHeight; }
 
     const selectMasterFilesBtn = document.getElementById('selectMasterFilesBtn');
@@ -516,14 +516,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const enrichedCnpjCountSpan = document.getElementById('enrichedCnpjCount');
     const refreshCountBtn = document.getElementById('refreshCountBtn');
     const downloadEnrichedDataBtn = document.getElementById('downloadEnrichedDataBtn');
-    
+
     const dbLoadProgressContainer = document.getElementById('dbLoadProgressContainer');
     const dbLoadProgressTitle = document.getElementById('dbLoadProgressTitle');
     const dbLoadProgressPercent = document.getElementById('dbLoadProgressPercent');
     const dbLoadProgressBarFill = document.getElementById('dbLoadProgressBarFill');
     const dbLoadProgressText = document.getElementById('dbLoadProgressText');
     const dbLoadProgressStats = document.getElementById('dbLoadProgressStats');
-    
+
     let enrichmentMasterFiles = [];
     let enrichmentEnrichFiles = [];
 
@@ -584,13 +584,13 @@ document.addEventListener('DOMContentLoaded', () => {
     startLoadToDbBtn.addEventListener('click', () => {
         if (enrichmentMasterFiles.length === 0) return appendEnrichmentLog('❌ ERRO: Selecione pelo menos uma planilha mestra.');
         startLoadToDbBtn.disabled = true;
-        
+
         dbLoadProgressContainer.style.display = 'block';
         dbLoadProgressBarFill.style.width = '0%';
         dbLoadProgressPercent.textContent = '0%';
         dbLoadProgressText.textContent = 'Iniciando...';
         dbLoadProgressStats.textContent = '';
-        
+
         appendEnrichmentLog('Iniciando carga para o banco de dados...');
         window.electronAPI.startDbLoad({ masterFiles: enrichmentMasterFiles });
     });
@@ -640,11 +640,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (etaElement) {
             etaElement.textContent = eta ? `ETA: ${eta}` : '';
             if (progress === 100) {
-                 etaElement.textContent = 'Concluído!';
+                etaElement.textContent = 'Concluído!';
             }
         }
     });
-    
+
     window.electronAPI.onDbLoadProgress(({ current, total, fileName, cnpjsProcessed }) => {
         const percent = Math.round((current / total) * 100);
         dbLoadProgressBarFill.style.width = `${percent}%`;
@@ -652,21 +652,21 @@ document.addEventListener('DOMContentLoaded', () => {
         dbLoadProgressText.textContent = `Processando: ${fileName}`;
         dbLoadProgressStats.textContent = `${cnpjsProcessed} CNPJs processados`;
     });
-    
+
     window.electronAPI.onDbLoadFinished(() => {
         startLoadToDbBtn.disabled = false;
         updateEnrichedCnpjCount();
-        
+
         setTimeout(() => {
             dbLoadProgressContainer.style.display = 'none';
         }, 3000);
-        
+
         dbLoadProgressTitle.textContent = 'Carga Concluída!';
         dbLoadProgressBarFill.style.width = '100%';
         dbLoadProgressPercent.textContent = '100%';
         dbLoadProgressText.textContent = 'Finalizado com sucesso';
     });
-    
+
     window.electronAPI.onEnrichmentFinished(() => {
         startEnrichmentBtn.disabled = false;
     });
@@ -699,6 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'tabulacao_id', label: 'ID Tabulação' },
         { name: 'operacao_id', label: 'ID Operação' },
         { name: 'tipoServico', label: 'Tipo Serviço' },
+        { name: 'servico_id', label: 'ID Serviço' },
         { name: 'grupo_operador_id', label: 'ID Grupo Operador' },
     ];
 
@@ -727,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (monitoringSearchInput) {
         const foneDestinoCheckbox = document.getElementById('check-fone_destino');
         const foneDestinoInput = document.getElementById('input-fone_destino');
-        
+
         monitoringSearchInput.addEventListener('input', () => {
             const searchTerm = monitoringSearchInput.value.trim();
             if (foneDestinoInput) {
@@ -810,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardDetails.innerHTML = '';
 
         let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
-        
+
         let params = [];
         apiParams.forEach(param => {
             const checkbox = document.getElementById(`check-${param.name}`);
@@ -818,7 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.getElementById(`input-${param.name}`);
                 params.push(`${param.name}=${encodeURIComponent(input.value)}`);
             } else {
-                 params.push(`${param.name}=`);
+                params.push(`${param.name}=`);
             }
         });
 
@@ -875,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
         const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
         const avgMinutes = Math.floor(avgDurationSeconds / 60);
         const avgSeconds = Math.round(avgDurationSeconds % 60);
@@ -907,15 +908,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const createDetailCard = (title, dataObject) => {
             // Ordena os dados por contagem (descendente)
-            const sortedData = Object.entries(dataObject).sort(([,a],[,b]) => b - a);
-            
+            const sortedData = Object.entries(dataObject).sort(([, a], [, b]) => b - a);
+
             let listItems = sortedData.map(([name, count]) => `
                 <li>
                     <span class="name" title="${name}">${name}</span>
                     <span class="count">${count.toLocaleString('pt-BR')}</span>
                 </li>
             `).join('');
-            
+
             if (!listItems) listItems = '<li>Nenhum dado.</li>';
 
             return `

@@ -340,7 +340,15 @@
         .detail-list { list-style: none; padding: 0; max-height: 250px; overflow-y: auto; }
         .detail-list li { display: flex; justify-content: space-between; padding: 8px 5px; border-bottom: 1px solid var(--border-color); font-size: 13px; }
         .detail-list li:last-child { border-bottom: none; }
-        .detail-list li .name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+        .detail-list li .name {
+            color: var(--text-primary);
+            /* Novas propriedades para responsividade */
+            white-space: nowrap;      /* Impede a quebra de linha */
+            overflow: hidden;         /* Esconde o que transbordar */
+            text-overflow: ellipsis;  /* Adiciona '...' no final */
+            flex-shrink: 1;           /* Permite que o elemento encolha */
+            min-width: 0;             /* Necessário para o flexbox truncar o texto */
+        }
         .detail-list li .count { font-weight: 600; background: var(--bg-card); padding: 2px 8px; border-radius: 6px; color: var(--accent-color);}
 
         @media (max-width: 1200px) { .grid, .monitoring-grid { grid-template-columns: 1fr; gap: 20px; } }
