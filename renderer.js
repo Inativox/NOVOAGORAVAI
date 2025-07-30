@@ -709,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSearchInput = document.getElementById('modal-search-input');
     const modalListContainer = document.getElementById('modal-list-container');
     let currentModalContext = null;
+    
 
     const operadores = [
         { id: '143', name: 'Adriene Rodrigues' }, { id: '58', name: 'Ana Carolina' }, { id: '46', name: 'Ana Clara Lopes' },
