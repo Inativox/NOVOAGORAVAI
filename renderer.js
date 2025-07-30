@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'localGrid': 'local-sections',
         'apiGrid': 'api-sections',
         'enrichmentGrid': 'enrichment-sections',
-        'monitoringGrid': 'monitoring-sections'
     };
 
     let sortableInstances = {};
@@ -213,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startCleaningBtn = document.getElementById('startCleaningBtn');
     const resetLocalBtn = document.getElementById('resetLocalBtn');
     const adjustPhonesBtn = document.getElementById('adjustPhonesBtn');
-    const backupCheckbox = document.getElementById('backupCheckbox');
+    const backupCheckbox = document.getElementById('backupCheckbox').parentElement;
     const autoAdjustPhonesCheckbox = document.getElementById('autoAdjustPhonesCheckbox');
     const rootFilePathSpan = document.getElementById('rootFilePath');
     const selectedCleanFilesDiv = document.getElementById('selectedCleanFiles');
@@ -254,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uploadProgressText) uploadProgressText.textContent = '';
     }
 
-    if (backupCheckbox) backupCheckbox.addEventListener('change', () => { backupEnabled = backupCheckbox.checked; });
+    if (backupCheckbox) backupCheckbox.addEventListener('change', (e) => { backupEnabled = e.target.querySelector('input').checked; });
     if (autoAdjustPhonesCheckbox) autoAdjustPhonesCheckbox.addEventListener('change', () => { autoAdjustPhones = autoAdjustPhonesCheckbox.checked; });
 
     if (checkDbCheckbox) checkDbCheckbox.addEventListener('change', () => {
@@ -389,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logDiv) logDiv.textContent = '';
         if (selectedMergeFilesDiv) selectedMergeFilesDiv.innerHTML = '';
         if (batchIdInput) batchIdInput.value = '';
-        if (backupCheckbox) backupCheckbox.checked = false;
+        if (backupCheckbox) backupCheckbox.querySelector('input').checked = false;
         if (autoAdjustPhonesCheckbox) autoAdjustPhonesCheckbox.checked = false;
         if (checkDbCheckbox) checkDbCheckbox.checked = false;
         if (saveToDbCheckbox) saveToDbCheckbox.checked = false;
@@ -639,8 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (enrichmentEnrichFiles.length === 0) return appendEnrichmentLog('❌ ERRO: Selecione pelo menos um arquivo para enriquecer.');
         startEnrichmentBtn.disabled = true;
         const strategy = document.querySelector('input[name="enrichStrategy"]:checked').value;
+        const backup = document.getElementById('backupCheckbox').checked;
         appendEnrichmentLog(`Iniciando enriquecimento com a estratégia: ${strategy.toUpperCase()}`);
-        window.electronAPI.startEnrichment({ filesToEnrich: enrichmentEnrichFiles, strategy, backup: backupCheckbox.checked });
+        window.electronAPI.startEnrichment({ filesToEnrich: enrichmentEnrichFiles, strategy, backup });
     });
 
     window.electronAPI.onEnrichmentLog((msg) => appendEnrichmentLog(msg));
@@ -685,148 +685,88 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // #################################################################
-    // #           LÓGICA PARA A ABA DE MONITORAMENTO                  #
+    // #           LÓGICA PARA A ABA DE MONITORAMENTO (ATUALIZADA)     #
     // #################################################################
 
-    // --- INÍCIO: DADOS E LÓGICA DO NOVO MODAL DE SELEÇÃO ---
+    // --- Variáveis e Constantes Globais para Monitoramento ---
+    let lastSuspiciousCalls = [];
+    const SUSPICIOUS_TABULATIONS = ['MUDO/ENCERRAR [43]', 'MUDO [33]'];
+    const SUSPICIOUS_DURATION_SECONDS = 180; // 3 minutos
+
+    function getDurationInSeconds(timeString) {
+        if (!timeString || typeof timeString !== 'string') return 0;
+        const parts = timeString.split(':');
+        if (parts.length === 3) {
+            return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+        }
+        return 0;
+    }
+
+    // --- Lógica para o Modal de Seleção ---
     const selectionModal = document.getElementById('selection-modal');
     const modalTitle = document.getElementById('modal-title');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalCloseBtn = selectionModal.querySelector('.modal-close-btn');
     const modalSearchInput = document.getElementById('modal-search-input');
     const modalListContainer = document.getElementById('modal-list-container');
     let currentModalContext = null;
 
     const operadores = [
-        { id: '143', name: 'Adriene Rodrigues' },
-        { id: '58', name: 'Ana Carolina' },
-        { id: '46', name: 'Ana Clara Lopes' },
-        { id: '105', name: 'Ana Maia' },
-        { id: '117', name: 'Ana Rovere' },
-        { id: '40', name: 'Anna Barbosa' }, // Corrigido: estava como id 96
-        { id: '156', name: 'Arthur Medeiros' },
-        { id: '112', name: 'Beatriz Martins' },
-        { id: '92', name: 'Bianca Antunes' },
-        { id: '179', name: 'Brenda Ewald' },
-        { id: '202', name: 'Bruna Lobato' }, // Corrigido
-        { id: '144', name: 'Cairo Motta' },
-        { id: '126', name: 'Camila Nogueira' },
-        { id: '205', name: 'Daiany Porto' }, // Corrigido
-        { id: '115', name: 'Daniel Neves' },
-        { id: '174', name: 'Diana Viana' },
-        { id: '138', name: 'Douglas Reis' }, // Corrigido
-        { id: '77', name: 'Erik Freitas' },  // Corrigido
-        { id: '64', name: 'Felipe Martins' },
-        { id: '150', name: 'Fernanda Novaes' }, // Corrigido
-        { id: '94', name: 'Gabriela Pitzer' },
-        { id: '189', name: 'Giselle Mota' },
-        { id: '108', name: 'Giselly Salles' },
-        { id: '192', name: 'Graça Vitória' },
-        { id: '139', name: 'Guilherme Maudonet' },
-        { id: '104', name: 'Heloisa Bispo' }, // Corrigido
-        { id: '146', name: 'Ian Branco' },
-        { id: '55', name: 'Jennyfer Vieira' },
-        { id: '111', name: 'Jessica Oliveira' },
-        { id: '109', name: 'João Honorato' }, // Corrigido
-        { id: '195', name: 'Joao Soares' },
-        { id: '78', name: 'Joyce Menezes' },
-        { id: '132', name: 'Juliana Oliveira' },
-        { id: '122', name: 'Karolina Silva' },
-        { id: '147', name: 'Kauã Oliveira' },
-        { id: '194', name: 'Kawan Gabriel' },
-        { id: '57', name: 'Larissa Moroni' },
-        { id: '71', name: 'Larissa Oliveira' }, // Corrigido
-        { id: '135', name: 'Lohana Soares' },
-        { id: '68', name: 'Luana Alves' },
-        { id: '136', name: 'Luana Ribeiro' },
-        { id: '178', name: 'Manuela Giraldes' },
-        { id: '126', name: 'Marcos Vinicius' }, // Corrigido
-        { id: '133', name: 'Maria Cristina' },
-        { id: '182', name: 'Maria Luna' },
-        { id: '175', name: 'Maria Martins' },
-        { id: '103', name: 'Mariana Oliveira' },
-        { id: '104', name: 'Maria Seixas' },
-        { id: '171', name: 'Maria Sotelino' },
-        { id: '127', name: 'Matheus Ribeiro' },
-        { id: '180', name: 'Mauricio Freitas' },
-        { id: '173', name: 'Mirella Lira' },
-        { id: '116', name: 'Nicolle Santos' },
-        { id: '129', name: 'Paula Santos' },
-        { id: '61', name: 'Ramon Gonçalves' },
-        { id: '34', name: 'Raphael Machado' },
-        { id: '37', name: 'Renata Souza' },
-        { id: '193', name: 'Ricardo França' }, // Corrigido
-        { id: '30', name: 'Rodrigo Santana' },
-        { id: '128', name: 'Samara Gomes' },
-        { id: '96', name: 'Samella Figueira' },
-        { id: '98', name: 'Sarah Leite' },
-        { id: '157', name: 'Thais Maciel' },
-        { id: '74', name: 'Thays Florencio' }, // Corrigido
-        { id: '93', name: 'Vanessa Barros' },
-        { id: '42', name: 'Vanessa dos Santos' },
-        { id: '177', name: 'Victor Alves' }, // Corrigido
-        { id: '204', name: 'Vitor Faria' },  // Corrigido
-        { id: '149', name: 'Vivian Ferreira' }, // Corrigido
-        { id: '190', name: 'Vivian Simplicio' },
-        { id: '134', name: 'Wanessa Fernandes' }
+        { id: '143', name: 'Adriene Rodrigues' }, { id: '58', name: 'Ana Carolina' }, { id: '46', name: 'Ana Clara Lopes' },
+        { id: '105', name: 'Ana Maia' }, { id: '117', name: 'Ana Rovere' }, { id: '40', name: 'Anna Barbosa' },
+        { id: '156', name: 'Arthur Medeiros' }, { id: '112', name: 'Beatriz Martins' }, { id: '92', name: 'Bianca Antunes' },
+        { id: '179', name: 'Brenda Ewald' }, { id: '202', name: 'Bruna Lobato' }, { id: '144', name: 'Cairo Motta' },
+        { id: '126', name: 'Camila Nogueira' }, { id: '205', name: 'Daiany Porto' }, { id: '115', name: 'Daniel Neves' },
+        { id: '174', name: 'Diana Viana' }, { id: '138', name: 'Douglas Reis' }, { id: '77', name: 'Erik Freitas' },
+        { id: '64', name: 'Felipe Martins' }, { id: '150', name: 'Fernanda Novaes' }, { id: '94', name: 'Gabriela Pitzer' },
+        { id: '189', name: 'Giselle Mota' }, { id: '108', name: 'Giselly Salles' }, { id: '192', name: 'Graça Vitória' },
+        { id: '139', name: 'Guilherme Maudonet' }, { id: '104', name: 'Heloisa Bispo' }, { id: '146', name: 'Ian Branco' },
+        { id: '55', name: 'Jennyfer Vieira' }, { id: '111', name: 'Jessica Oliveira' }, { id: '109', name: 'João Honorato' },
+        { id: '195', name: 'Joao Soares' }, { id: '78', name: 'Joyce Menezes' }, { id: '132', name: 'Juliana Oliveira' },
+        { id: '122', name: 'Karolina Silva' }, { id: '147', name: 'Kauã Oliveira' }, { id: '194', name: 'Kawan Gabriel' },
+        { id: '57', name: 'Larissa Moroni' }, { id: '71', name: 'Larissa Oliveira' }, { id: '135', name: 'Lohana Soares' },
+        { id: '68', name: 'Luana Alves' }, { id: '136', name: 'Luana Ribeiro' }, { id: '178', name: 'Manuela Giraldes' },
+        { id: '126', name: 'Marcos Vinicius' }, { id: '133', name: 'Maria Cristina' }, { id: '182', name: 'Maria Luna' },
+        { id: '175', name: 'Maria Martins' }, { id: '103', name: 'Mariana Oliveira' }, { id: '104', name: 'Maria Seixas' },
+        { id: '171', name: 'Maria Sotelino' }, { id: '127', name: 'Matheus Ribeiro' }, { id: '180', name: 'Mauricio Freitas' },
+        { id: '173', name: 'Mirella Lira' }, { id: '116', name: 'Nicolle Santos' }, { id: '129', name: 'Paula Santos' },
+        { id: '61', name: 'Ramon Gonçalves' }, { id: '34', name: 'Raphael Machado' }, { id: '37', name: 'Renata Souza' },
+        { id: '193', name: 'Ricardo França' }, { id: '30', name: 'Rodrigo Santana' }, { id: '128', name: 'Samara Gomes' },
+        { id: '96', name: 'Samella Figueira' }, { id: '98', name: 'Sarah Leite' }, { id: '157', name: 'Thais Maciel' },
+        { id: '74', name: 'Thays Florencio' }, { id: '93', name: 'Vanessa Barros' }, { id: '42', name: 'Vanessa dos Santos' },
+        { id: '177', name: 'Victor Alves' }, { id: '204', name: 'Vitor Faria' }, { id: '149', name: 'Vivian Ferreira' },
+        { id: '190', name: 'Vivian Simplicio' }, { id: '134', name: 'Wanessa Fernandes' }
     ];
-
-
     const servicos = [
-        { id: '159', name: '[C6 BANK] - EQUIPE BRUNA', category: 'Abertura' },
-        { id: '235', name: '[C6 BANK] - EQUIPE CAMILA', category: 'Abertura' },
-        { id: '160', name: '[C6 BANK] - EQUIPE LAIANE', category: 'Abertura' },
-        { id: '233', name: '[C6 BANK] - EQUIPE TEF', category: 'Abertura' },
-        { id: '161', name: '[C6 BANK] - EQUIPE WALESKA', category: 'Abertura' },
-        { id: '194', name: '[C6 BANK] -pt2 NOVO TRANSBORDO', category: 'Abertura' },
-        { id: '124', name: '[C6 BANK] - CADÊNCIA GERAL', category: 'Abertura' },
-        { id: '181', name: '[C6/MB] C6 Pay Relacionamento ANTONIO', category: 'Relacionamento' },
-        { id: '232', name: '[C6/MB] C6 Pay Relacionamento JOAO AVILA', category: 'Relacionamento' },
-        { id: '180', name: '[C6/MB] C6 Pay Relacionamento RAPHAELA CALDERON', category: 'Relacionamento' },
-        { id: '168', name: 'Relacionamento Ana Clara', category: 'Relacionamento' },
-        { id: '227', name: 'Relacionamento Anna Barbosa', category: 'Relacionamento' },
-        { id: '154', name: 'Relacionamento Antonio Costa', category: 'Relacionamento' },
-        { id: '169', name: 'Relacionamento Cairo Motta', category: 'Relacionamento' },
-        { id: '203', name: 'Relacionamento Diana Viana', category: 'Relacionamento' },
-        { id: '186', name: 'Relacionamento digite1', category: 'Relacionamento' },
-        { id: '202', name: 'Relacionamento Douglas Reis', category: 'Relacionamento' },
-        { id: '176', name: 'Relacionamento Fernanda Novaes', category: 'Relacionamento' },
-        { id: '171', name: 'Relacionamento Guilherme Maudonet', category: 'Relacionamento' },
-        { id: '155', name: 'Relacionamento Higor Campos', category: 'Relacionamento' },
-        { id: '229', name: 'Relacionamento Jennyfer Vieira', category: 'Relacionamento' },
-        { id: '172', name: 'Relacionamento Jessica Oliveira', category: 'Relacionamento' },
-        { id: '148', name: 'Relacionamento João Avila', category: 'Relacionamento' },
-        { id: '201', name: 'Relacionamento João Honorato', category: 'Relacionamento' },
-        { id: '150', name: 'Relacionamento Juliana Oliveira', category: 'Relacionamento' },
-        { id: '146', name: 'Relacionamento Karolina', category: 'Relacionamento' },
-        { id: '228', name: 'Relacionamento Larissa Oliveira', category: 'Relacionamento' },
-        { id: '158', name: 'Relacionamento Luana Ribeiro', category: 'Relacionamento' },
-        { id: '174', name: 'Relacionamento Marcos Vinicius', category: 'Relacionamento' },
-        { id: '188', name: 'Relacionamento Maria Cristina', category: 'Relacionamento' },
-        { id: '225', name: 'Relacionamento Maria Seixas', category: 'Relacionamento' },
-        { id: '151', name: 'Relacionamento Matheus Ribeiro', category: 'Relacionamento' },
-        { id: '153', name: 'Relacionamento Paula Santos', category: 'Relacionamento' },
-        { id: '193', name: 'Relacionamento Raphaela Calderon', category: 'Relacionamento' },
-        { id: '177', name: 'Relacionamento Raphael Machado', category: 'Relacionamento' },
-        { id: '173', name: 'Relacionamento Renata Souza', category: 'Relacionamento' },
-        { id: '170', name: 'Relacionamento Ricardo França', category: 'Relacionamento' },
-        { id: '226', name: 'Relacionamento Roberto Bianna', category: 'Relacionamento' },
+        { id: '159', name: '[C6 BANK] - EQUIPE BRUNA', category: 'Abertura' }, { id: '235', name: '[C6 BANK] - EQUIPE CAMILA', category: 'Abertura' },
+        { id: '160', name: '[C6 BANK] - EQUIPE LAIANE', category: 'Abertura' }, { id: '233', name: '[C6 BANK] - EQUIPE TEF', category: 'Abertura' },
+        { id: '161', name: '[C6 BANK] - EQUIPE WALESKA', category: 'Abertura' }, { id: '194', name: '[C6 BANK] -pt2 NOVO TRANSBORDO', category: 'Abertura' },
+        { id: '124', name: '[C6 BANK] - CADÊNCIA GERAL', category: 'Abertura' }, { id: '181', name: '[C6/MB] C6 Pay Relacionamento ANTONIO', category: 'Relacionamento' },
+        { id: '232', name: '[C6/MB] C6 Pay Relacionamento JOAO AVILA', category: 'Relacionamento' }, { id: '180', name: '[C6/MB] C6 Pay Relacionamento RAPHAELA CALDERON', category: 'Relacionamento' },
+        { id: '168', name: 'Relacionamento Ana Clara', category: 'Relacionamento' }, { id: '227', name: 'Relacionamento Anna Barbosa', category: 'Relacionamento' },
+        { id: '154', name: 'Relacionamento Antonio Costa', category: 'Relacionamento' }, { id: '169', name: 'Relacionamento Cairo Motta', category: 'Relacionamento' },
+        { id: '203', name: 'Relacionamento Diana Viana', category: 'Relacionamento' }, { id: '186', name: 'Relacionamento digite1', category: 'Relacionamento' },
+        { id: '202', name: 'Relacionamento Douglas Reis', category: 'Relacionamento' }, { id: '176', name: 'Relacionamento Fernanda Novaes', category: 'Relacionamento' },
+        { id: '171', name: 'Relacionamento Guilherme Maudonet', category: 'Relacionamento' }, { id: '155', name: 'Relacionamento Higor Campos', category: 'Relacionamento' },
+        { id: '229', name: 'Relacionamento Jennyfer Vieira', category: 'Relacionamento' }, { id: '172', name: 'Relacionamento Jessica Oliveira', category: 'Relacionamento' },
+        { id: '148', name: 'Relacionamento João Avila', category: 'Relacionamento' }, { id: '201', name: 'Relacionamento João Honorato', category: 'Relacionamento' },
+        { id: '150', name: 'Relacionamento Juliana Oliveira', category: 'Relacionamento' }, { id: '146', name: 'Relacionamento Karolina', category: 'Relacionamento' },
+        { id: '228', name: 'Relacionamento Larissa Oliveira', category: 'Relacionamento' }, { id: '158', name: 'Relacionamento Luana Ribeiro', category: 'Relacionamento' },
+        { id: '174', name: 'Relacionamento Marcos Vinicius', category: 'Relacionamento' }, { id: '188', name: 'Relacionamento Maria Cristina', category: 'Relacionamento' },
+        { id: '225', name: 'Relacionamento Maria Seixas', category: 'Relacionamento' }, { id: '151', name: 'Relacionamento Matheus Ribeiro', category: 'Relacionamento' },
+        { id: '153', name: 'Relacionamento Paula Santos', category: 'Relacionamento' }, { id: '193', name: 'Relacionamento Raphaela Calderon', category: 'Relacionamento' },
+        { id: '177', name: 'Relacionamento Raphael Machado', category: 'Relacionamento' }, { id: '173', name: 'Relacionamento Renata Souza', category: 'Relacionamento' },
+        { id: '170', name: 'Relacionamento Ricardo França', category: 'Relacionamento' }, { id: '226', name: 'Relacionamento Roberto Bianna', category: 'Relacionamento' },
         { id: '231', name: 'Relacionamento Rodrigo Santana', category: 'Relacionamento' }
     ];
-
     const gruposOperador = [
-        { id: '85', name: 'Equipe Bruna' },
-        { id: '120', name: 'Equipe Camila' },
-        { id: '123', name: 'Equipe Laiane' },
-        { id: '133', name: 'Equipe TEF' },
-        { id: '87', name: 'Equipe Waleska' }
+        { id: '85', name: 'Equipe Bruna' }, { id: '120', name: 'Equipe Camila' }, { id: '123', name: 'Equipe Laiane' },
+        { id: '133', name: 'Equipe TEF' }, { id: '87', name: 'Equipe Waleska' }
     ];
 
     function renderModalList(items, searchTerm) {
         const lowerSearchTerm = searchTerm.toLowerCase();
         const filteredItems = items.filter(item => item.name.toLowerCase().includes(lowerSearchTerm));
-
         let html = '<ul class="custom-select-list">';
-
         if (currentModalContext.type === 'servico') {
             const grouped = filteredItems.reduce((acc, servico) => {
                 (acc[servico.category] = acc[servico.category] || []).push(servico);
@@ -839,10 +779,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     html += grouped[category].map(s => `<li data-id="${s.id}" data-name="${s.name}">${s.name}</li>`).join('');
                 }
             }
-        } else { // Para operadores e grupos de operadores
+        } else {
             html += filteredItems.map(item => `<li data-id="${item.id}" data-name="${item.name}">${item.name}</li>`).join('');
         }
-
         html += '</ul>';
         modalListContainer.innerHTML = html;
     }
@@ -863,18 +802,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (selectionModal) {
         modalCloseBtn.addEventListener('click', closeSelectionModal);
-        selectionModal.addEventListener('click', (e) => {
-            if (e.target === selectionModal) { // Clicou no overlay
-                closeSelectionModal();
-            }
-        });
-
-        modalSearchInput.addEventListener('input', () => {
-            if (currentModalContext) {
-                renderModalList(currentModalContext.data, modalSearchInput.value);
-            }
-        });
-
+        selectionModal.addEventListener('click', (e) => { if (e.target === selectionModal) { closeSelectionModal(); } });
+        modalSearchInput.addEventListener('input', () => { if (currentModalContext) { renderModalList(currentModalContext.data, modalSearchInput.value); } });
         modalListContainer.addEventListener('click', (e) => {
             const target = e.target;
             if (target && target.tagName === 'LI' && !target.classList.contains('group-header')) {
@@ -885,8 +814,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // --- FIM: LÓGICA DO NOVO MODAL DE SELEÇÃO ---
 
+    // --- Lógica para o Modal de Chamadas Suspeitas ---
+    const suspiciousCallsModal = document.getElementById('suspicious-calls-modal');
+    const suspiciousCallsList = document.getElementById('suspicious-calls-list');
+    const suspiciousCallsCloseBtn = suspiciousCallsModal.querySelector('.modal-close-btn');
+
+    function showSuspiciousCallsModal() {
+        let tableHTML = `
+            <table class="modal-table">
+                <thead>
+                    <tr>
+                        <th>Operador</th>
+                        <th>CNPJ Cliente</th>
+                        <th>Duração</th>
+                        <th>Tabulação</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        if (lastSuspiciousCalls.length > 0) {
+            lastSuspiciousCalls.forEach(call => {
+                tableHTML += `
+                    <tr>
+                        <td>${call.nome_operador || 'N/A'}</td>
+                        <td>${call.cpf || 'N/A'}</td>
+                        <td>${call.tempo_ligacao || '00:00:00'}</td>
+                        <td>${call.tabulacao || 'N/A'}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tableHTML += '<tr><td colspan="4" style="text-align:center;">Nenhuma chamada suspeita encontrada.</td></tr>';
+        }
+        tableHTML += '</tbody></table>';
+        suspiciousCallsList.innerHTML = tableHTML;
+        suspiciousCallsModal.classList.remove('hidden');
+    }
+
+    function closeSuspiciousCallsModal() {
+        suspiciousCallsModal.classList.add('hidden');
+    }
+
+    if (suspiciousCallsCloseBtn) suspiciousCallsCloseBtn.addEventListener('click', closeSuspiciousCallsModal);
+    if (suspiciousCallsModal) suspiciousCallsModal.addEventListener('click', (e) => { if (e.target === suspiciousCallsModal) { closeSuspiciousCallsModal(); } });
+
+    // --- Lógica Principal da Aba de Monitoramento ---
     const apiParametersContainer = document.getElementById('api-parameters');
     const generateReportBtn = document.getElementById('generateReportBtn');
     const monitoringLog = document.getElementById('monitoring-log');
@@ -895,46 +868,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataInicioInput = document.getElementById('data_inicio_monitor');
     const dataFimInput = document.getElementById('data_fim_monitor');
     const monitoringSearchInput = document.getElementById('monitoringSearchInput');
+    const dateFilterMenu = document.getElementById('date-filter-menu');
 
     const apiParams = [
-        { name: 'id', label: 'Call ID' },
-        { name: 'nome', label: 'Nome Cliente' },
-        { name: 'chave', label: 'Chave' },
-        { name: 'cpf', label: 'CPF' },
-        { name: 'operador_id', label: 'ID Operador' },
-        { name: 'fone_origem', label: 'Fone Origem' },
-        { name: 'fone_destino', label: 'Fone Destino' },
-        { name: 'sentido', label: 'Sentido' },
-        { name: 'tronco_id', label: 'ID Tronco' },
-        { name: 'digitado', label: 'Digitado' },
-        { name: 'resultado', label: 'Resultado' },
-        { name: 'tabulacao_id', label: 'ID Tabulação' },
-        { name: 'operacao_id', label: 'ID Operação' },
-        { name: 'tipoServico', label: 'Tipo Serviço' },
-        { name: 'servico_id', label: 'ID Serviço' },
-        { name: 'grupo_operador_id', label: 'ID Grupo Operador' },
+        { name: 'id', label: 'Call ID' }, { name: 'nome', label: 'Nome Cliente' }, { name: 'chave', label: 'Chave' },
+        { name: 'cpf', label: 'CPF' }, { name: 'operador_id', label: 'Operador' }, { name: 'fone_origem', label: 'Fone Origem' },
+        { name: 'fone_destino', label: 'Fone Destino' }, { name: 'sentido', label: 'Sentido' }, { name: 'tronco_id', label: 'ID Tronco' },
+        { name: 'digitado', label: 'Digitado' }, { name: 'resultado', label: 'Resultado' }, { name: 'tabulacao_id', label: 'ID Tabulação' },
+        { name: 'operacao_id', label: 'ID Operação' }, { name: 'tipoServico', label: 'Tipo Serviço' }, { name: 'servico_id', label: 'Desempenho de campanha' },
+        { name: 'grupo_operador_id', label: 'Desempenho de equipes' },
     ];
 
     if (apiParametersContainer) {
         apiParametersContainer.innerHTML = apiParams.map(param => {
-            if (param.name === 'operador_id' || param.name === 'servico_id' || param.name === 'grupo_operador_id') {
-                return `
-                    <div class="param-item">
-                        <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
-                        <label for="check-${param.name}">${param.label}</label>
-                        <div id="${param.name}-select-container" class="custom-select-container hidden">
-                            <input type="text" id="${param.name}-search" readonly placeholder="Clique para selecionar..." style="cursor: pointer;">
-                            <input type="hidden" id="input-${param.name}">
-                        </div>
-                    </div>
-                `;
-            }
+            const isSelectable = ['operador_id', 'servico_id', 'grupo_operador_id'].includes(param.name);
+            const inputHtml = isSelectable ?
+                `<div id="${param.name}-select-container" class="custom-select-container hidden">
+                    <input type="text" id="${param.name}-search" readonly placeholder="Clique para selecionar..." style="cursor: pointer;">
+                    <input type="hidden" id="input-${param.name}">
+                </div>` :
+                `<input type="text" id="input-${param.name}" class="hidden" placeholder="Valor...">`;
 
             return `
                 <div class="param-item">
-                    <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
-                    <label for="check-${param.name}">${param.label}</label>
-                    <input type="text" id="input-${param.name}" class="hidden" placeholder="Valor para ${param.label}">
+                    <div class="toggle-switch">
+                        <label class="switch">
+                            <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">${param.label}</span>
+                    </div>
+                    ${inputHtml}
                 </div>
             `;
         }).join('');
@@ -942,48 +906,33 @@ document.addEventListener('DOMContentLoaded', () => {
         apiParams.forEach(param => {
             const checkbox = document.getElementById(`check-${param.name}`);
             if (!checkbox) return;
+            const isSelectable = ['operador_id', 'servico_id', 'grupo_operador_id'].includes(param.name);
+            const inputElement = isSelectable ? document.getElementById(`${param.name}-select-container`) : document.getElementById(`input-${param.name}`);
 
-            if (param.name === 'operador_id' || param.name === 'servico_id' || param.name === 'grupo_operador_id') {
-                const container = document.getElementById(`${param.name}-select-container`);
-                const searchEl = document.getElementById(`${param.name}-search`);
-                const hiddenInputEl = document.getElementById(`input-${param.name}`);
-
-                checkbox.addEventListener('change', () => {
-                    container.classList.toggle('hidden', !checkbox.checked);
-                    if (!checkbox.checked) {
-                        searchEl.value = '';
-                        hiddenInputEl.value = '';
+            checkbox.addEventListener('change', () => {
+                inputElement.classList.toggle('hidden', !checkbox.checked);
+                if (!checkbox.checked) {
+                    if (isSelectable) {
+                        inputElement.querySelector('input[type="text"]').value = '';
+                        inputElement.querySelector('input[type="hidden"]').value = '';
+                    } else {
+                        inputElement.value = '';
                     }
-                });
+                }
+            });
 
+            if (isSelectable) {
+                const searchEl = document.getElementById(`${param.name}-search`);
                 searchEl.addEventListener('click', () => {
                     if (!checkbox.checked) return;
-                    let data;
-                    if (param.name === 'operador_id') {
-                        data = operadores;
-                    } else if (param.name === 'servico_id') {
-                        data = servicos;
-                    } else {
-                        data = gruposOperador;
-                    }
-
-                    const context = {
-                        type: param.name.replace('_id', ''),
-                        title: `Selecionar ${param.label}`,
-                        data: data,
-                        searchEl,
-                        hiddenInputEl
-                    };
-                    openSelectionModal(context);
-                });
-
-            } else {
-                const input = document.getElementById(`input-${param.name}`);
-                checkbox.addEventListener('change', () => {
-                    input.classList.toggle('hidden', !checkbox.checked);
-                    if (!checkbox.checked) {
-                        input.value = '';
-                    }
+                    let data, type;
+                    if (param.name === 'operador_id') { data = operadores; type = 'operador'; } 
+                    else if (param.name === 'servico_id') { data = servicos; type = 'servico'; } 
+                    else { data = gruposOperador; type = 'grupo_operador'; }
+                    openSelectionModal({
+                        type: type, title: `Selecionar ${param.label}`, data: data,
+                        searchEl: searchEl, hiddenInputEl: document.getElementById(`input-${param.name}`)
+                    });
                 });
             }
         });
@@ -995,17 +944,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         monitoringSearchInput.addEventListener('input', () => {
             const searchTerm = monitoringSearchInput.value.trim();
-            if (foneDestinoInput) {
-                foneDestinoInput.value = searchTerm;
-            }
-            if (foneDestinoCheckbox) {
-                if (searchTerm) {
-                    if (!foneDestinoCheckbox.checked) {
-                        foneDestinoCheckbox.checked = true;
-                        foneDestinoInput.classList.remove('hidden');
-                    }
-                }
-            }
+            foneDestinoInput.value = searchTerm;
+            const hasSearchTerm = searchTerm !== '';
+            foneDestinoCheckbox.checked = hasSearchTerm;
+            foneDestinoInput.classList.toggle('hidden', !hasSearchTerm);
         });
     }
 
@@ -1022,53 +964,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${day}/${month}/${year}`;
     }
 
-    document.querySelectorAll('.date-filter-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const period = e.target.dataset.period;
-            const today = new Date();
-            let startDate, endDate = new Date();
-
-            switch (period) {
-                case 'today':
-                    startDate = today;
-                    endDate = today;
-                    break;
-                case 'yesterday':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 1);
-                    endDate = startDate;
-                    break;
-                case 'this_week':
-                    startDate = new Date(today);
-                    const dayOfWeek = today.getDay();
-                    startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
-                    endDate = today;
-                    break;
-                case 'last_week':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - today.getDay() - 6);
-                    endDate = new Date(startDate);
-                    endDate.setDate(startDate.getDate() + 6);
-                    break;
-                case 'this_month':
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                    endDate = today;
-                    break;
+    if (dateFilterMenu) {
+        dateFilterMenu.addEventListener('click', (e) => {
+            if (e.target.tagName === 'LI') {
+                const period = e.target.dataset.period;
+                const today = new Date();
+                let startDate, endDate = new Date();
+                switch (period) {
+                    case 'today': startDate = today; endDate = today; break;
+                    case 'yesterday': startDate = new Date(today); startDate.setDate(today.getDate() - 1); endDate = startDate; break;
+                    case 'this_week': startDate = new Date(today); const dayOfWeek = today.getDay(); startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)); endDate = today; break;
+                    case 'last_week': startDate = new Date(today); startDate.setDate(today.getDate() - today.getDay() - 6); endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6); break;
+                    case 'this_month': startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = today; break;
+                }
+                if (dataInicioInput) dataInicioInput.value = getHtmlDate(startDate);
+                if (dataFimInput) dataFimInput.value = getHtmlDate(endDate);
+                e.target.closest('details').removeAttribute('open');
             }
-
-            if (dataInicioInput) dataInicioInput.value = getHtmlDate(startDate);
-            if (dataFimInput) dataFimInput.value = getHtmlDate(endDate);
         });
-    });
+    }
+
 
     if (generateReportBtn) generateReportBtn.addEventListener('click', async () => {
         generateReportBtn.disabled = true;
         monitoringLog.innerHTML = '> 🌀 Gerando relatório... Por favor, aguarde.';
         dashboardSummary.innerHTML = '';
         dashboardDetails.innerHTML = '';
-
         let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
-
         let params = [];
         apiParams.forEach(param => {
             const checkbox = document.getElementById(`check-${param.name}`);
@@ -1079,63 +1001,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 params.push(`${param.name}=`);
             }
         });
-
         params.push(`data_inicio=${getApiDate(dataInicioInput.value)}`);
         params.push(`data_fim=${getApiDate(dataFimInput.value)}`);
         params.push('formato=json');
-
         const finalUrl = baseUrl + params.join('&');
-
         const result = await window.electronAPI.fetchMonitoringReport(finalUrl);
-
         if (result.success && result.data) {
             updateDashboard(result.data);
             monitoringLog.innerHTML = `> ✅ Relatório gerado com sucesso. ${result.data.length} registros encontrados.`;
         } else {
-            monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API. Verifique a console para mais detalhes.'}`;
+            monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API.'}`;
         }
-
         generateReportBtn.disabled = false;
     });
 
     function updateDashboard(data) {
-        if (!data || !Array.isArray(data) || data.length === 0) {
+        if (!data || !Array.isArray(data)) {
+            dashboardSummary.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1;">Ocorreu um erro ou nenhum dado foi retornado.</p>';
+            dashboardDetails.innerHTML = '';
+            return;
+        }
+         if (data.length === 0) {
             dashboardSummary.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1;">Nenhum dado retornado para os filtros selecionados.</p>';
             dashboardDetails.innerHTML = '';
             return;
         }
-
+    
         const totalCalls = data.length;
         const aggregators = {
-            tabulacao: {},
-            resultado: {},
-            nome_operador: {},
-            nome_campanha: {},
-            sentido: {},
-            origem: {},
+            tabulacao: {}, resultado: {}, nome_operador: {}, nome_campanha: {},
         };
-
+        const detailedTabulations = {};
         let totalDurationSeconds = 0;
-
+        let suspiciousCalls = [];
+    
         data.forEach(item => {
+            const tabulacao = item.tabulacao || 'Não Preenchido';
+            const duration = getDurationInSeconds(item.tempo_ligacao);
             for (const key in aggregators) {
                 const value = item[key] || 'Não Preenchido';
                 aggregators[key][value] = (aggregators[key][value] || 0) + 1;
             }
-            if (item.tempo_ligacao) {
-                const parts = item.tempo_ligacao.split(':');
-                if (parts.length === 3) {
-                    totalDurationSeconds += parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
-                }
+            if (!detailedTabulations[tabulacao]) { detailedTabulations[tabulacao] = []; }
+            detailedTabulations[tabulacao].push({
+                cpf: item.cpf,
+                duration: item.tempo_ligacao || '00:00:00'
+            });
+            if (SUSPICIOUS_TABULATIONS.includes(tabulacao) && duration >= SUSPICIOUS_DURATION_SECONDS) {
+                suspiciousCalls.push(item);
             }
+            totalDurationSeconds += duration;
         });
-
+        lastSuspiciousCalls = suspiciousCalls; 
+    
         const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
         const roundedAvgSeconds = Math.round(avgDurationSeconds);
         const avgMinutes = Math.floor(roundedAvgSeconds / 60);
         const avgSeconds = roundedAvgSeconds % 60;
         const tma = `${String(avgMinutes).padStart(2, '0')}:${String(avgSeconds).padStart(2, '0')}`;
-
+    
         dashboardSummary.innerHTML = `
             <div class="summary-card">
                 <div class="summary-card-title">Total de Chamadas</div>
@@ -1145,41 +1069,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="summary-card-title">TMA</div>
                 <div class="summary-card-value">${tma}</div>
             </div>
+            <button class="summary-card summary-card-button" id="suspicious-card-btn" ${lastSuspiciousCalls.length === 0 ? 'disabled' : ''}>
+                <div class="summary-card-title">Tabulações Suspeitas</div>
+                <div class="summary-card-value warning">${lastSuspiciousCalls.length}</div>
+            </button>
             <div class="summary-card">
-                <div class="summary-card-title">Resultados Únicos</div>
-                <div class="summary-card-value">${Object.keys(aggregators.resultado).length}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-card-title">Tabulações Únicas</div>
-                <div class="summary-card-value">${Object.keys(aggregators.tabulacao).length}</div>
+                <div class="summary-card-title">Operadores Envolvidos</div>
+                <div class="summary-card-value">${Object.keys(aggregators.nome_operador).length}</div>
             </div>
         `;
-
+        document.getElementById('suspicious-card-btn').addEventListener('click', showSuspiciousCallsModal);
+    
         dashboardDetails.innerHTML = '';
-
+        const isOperatorFiltered = document.getElementById('check-operador_id')?.checked;
+    
         const createDetailCard = (title, dataObject) => {
+            if (title === 'Top Tabulações' && isOperatorFiltered) {
+                return createInteractiveTabulationCard('Top Tabulações', detailedTabulations);
+            }
             const sortedData = Object.entries(dataObject).sort(([, a], [, b]) => b - a);
-
             let listItems = sortedData.map(([name, count]) => `
-                <li>
-                    <span class="name" title="${name}">${name}</span>
-                    <span class="count">${count.toLocaleString('pt-BR')}</span>
-                </li>
+                <li><span class="name" title="${name}">${name}</span><span class="count">${count.toLocaleString('pt-BR')}</span></li>
             `).join('');
-
             if (!listItems) listItems = '<li>Nenhum dado.</li>';
-
+            return `<div class="detail-card"><h3>${title}</h3><ul class="detail-list custom-scrollbar">${listItems}</ul></div>`;
+        }
+    
+        const createInteractiveTabulationCard = (title, detailedDataObject) => {
+            const sortedTabulations = Object.keys(detailedDataObject).sort((a, b) => detailedDataObject[b].length - detailedDataObject[a].length);
+            let detailsHtml = sortedTabulations.map(tabulationName => {
+                const calls = detailedDataObject[tabulationName];
+                const isSuspicious = SUSPICIOUS_TABULATIONS.includes(tabulationName);
+                const callListHtml = calls.map(call => `
+                    <li>
+                        <span class="call-cnpj">CNPJ: ${call.cpf || 'N/A'}</span>
+                        <span class="call-duration">Duração: ${call.duration}</span>
+                    </li>
+                `).join('');
+                return `
+                    <details>
+                        <summary class="${isSuspicious ? 'suspicious-summary' : ''}">
+                            <span>${tabulationName}</span>
+                            <span>${calls.length} chamadas</span>
+                        </summary>
+                        <ul class="tabulation-call-list custom-scrollbar">${callListHtml}</ul>
+                    </details>
+                `;
+            }).join('');
             return `
-                <div class="detail-card">
-                    <h3>${title}</h3>
-                    <ul class="detail-list custom-scrollbar">${listItems}</ul>
+                <div class="detail-card interactive-tabulation">
+                    <h3>${title} (Detalhado)</h3>
+                    <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">${detailsHtml}</div>
                 </div>
             `;
-        }
-
+        };
+        
         dashboardDetails.innerHTML += createDetailCard('Top Tabulações', aggregators.tabulacao);
-        dashboardDetails.innerHTML += createDetailCard('Resultados', aggregators.resultado);
+        dashboardDetails.innerHTML += createDetailCard('Resultados por Chamada', aggregators.resultado);
         dashboardDetails.innerHTML += createDetailCard('Top Operadores', aggregators.nome_operador);
-        dashboardDetails.innerHTML += createDetailCard('Campanhas', aggregators.nome_campanha);
+        dashboardDetails.innerHTML += createDetailCard('Top Campanhas', aggregators.nome_campanha);
     }
 });
