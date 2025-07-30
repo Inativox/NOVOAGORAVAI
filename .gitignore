@@ -47,4 +47,5 @@ lib-cov/
 
 # Outras
 .dataconnect/
-*.tgz"firebase-credentials.json" 
+*.tgz
+firebase-credentials.json

@@ -107,16 +107,17 @@ async function runPhoneAdjustment(filePath, event, backup) {
     }
 }
 
-const getCredentialsPath = () => app.isPackaged ? path.join(process.resourcesPath, "firebase-credentials.json") : path.join(__dirname, "firebase-credentials.json");
-
 try {
-    initializeApp({
-        credential: cert(require(getCredentialsPath()))
-    });
+    // A inicialização fica vazia. A biblioteca irá procurar
+    // a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS automaticamente.
+    initializeApp();
 } catch (error) {
-    console.error("ERRO FATAL: Não foi possível carregar 'firebase-credentials.json'.", error);
+    console.error("ERRO FATAL: Falha ao inicializar o Firebase. Verifique as credenciais.", error);
     dialog.showErrorBox("Erro Crítico", "As credenciais do Firebase não foram encontradas ou são inválidas. A aplicação será encerrada.");
-    app.quit();
+    // Garante que o app feche se houver erro de credencial
+    if (app) {
+      app.quit();
+    }
 }
 
 const db = getFirestore();
