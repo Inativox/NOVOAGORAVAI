@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
-const fsp = require("fs").promises; // Usaremos a versão de promessas do FS
+const fsp = require("fs").promises; 
 const XLSX = require("xlsx");
 const ExcelJS = require("exceljs");
 const axios = require("axios");
@@ -14,7 +14,75 @@ const { getFirestore } = require("firebase-admin/firestore");
 autoUpdater.logger = require("electron-log");
 autoUpdater.logger.transports.file.level = "info";
 
+// #################################################################
+// #           NOVO: SISTEMA DE LOGIN E PERMISSÕES                 #
+// #################################################################
+
+// Armazena as credenciais e papéis dos usuários.
+// Em uma aplicação real, isso deveria ser mais seguro (Pablo: banco de dadosVasco@2025senhas com hash).
+const users = {
+
+    'Pablo': { password: 'Vasco@2025', role: 'admin' },
+    'Felipe': { password: 'Flamengo@2025', role: 'admin' },
+    'Davi': { password: '080472Fr*', role: 'admin' },
+    'Mayko': { password: '123456', role: 'limited' },
+    'Bruna': { password: '123456', role: 'limited' },
+    'Laiane': { password: '123456', role: 'limited' },
+    'Waleska': { password: '123456', role: 'limited' },
+    'Gomes': { password: '123456', role: 'limited' },
+    'Tati': { password: '123456', role: 'limited' },
+};
+
 let mainWindow;
+let loginWindow;
+let currentUser = null; // Armazena o usuário logado
+
+// Função para criar a janela de login
+function createLoginWindow() {
+    loginWindow = new BrowserWindow({
+        width: 420,
+        height: 500,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+        resizable: false,
+        frame: false, // Opcional: para uma janela sem bordas
+    });
+
+    loginWindow.loadFile('login.html');
+
+    loginWindow.on('closed', () => {
+        loginWindow = null;
+    });
+}
+
+// NOVO: Handler para a tentativa de login
+ipcMain.handle('login-attempt', async (event, username, password) => {
+    const user = users[username];
+    if (user && user.password === password) {
+        currentUser = { username: username, role: user.role };
+        
+        createMainWindow(); // Cria a janela principal após o login
+        loginWindow.close(); // Fecha a janela de login
+
+        return { success: true };
+    } else {
+        return { success: false, message: 'Usuário ou senha inválidos.' };
+    }
+});
+
+// Função de verificação de permissão
+const isAdmin = () => {
+    return currentUser && currentUser.role === 'admin';
+};
+
+
+// #################################################################
+// #           LÓGICA EXISTENTE (COM MODIFICAÇÕES)                 #
+// #################################################################
+
 
 function sendUpdateStatusToWindow(text) {
     if (mainWindow && mainWindow.webContents) {
@@ -23,16 +91,12 @@ function sendUpdateStatusToWindow(text) {
 }
 
 autoUpdater.on("checking-for-update", () => sendUpdateStatusToWindow("Verificando por atualizações..."));
-autoUpdater.on("update-available", (info) => sendUpdateStatusToWindow(`Atualização disponível (v${info.version
-    }). Baixando...`));
+autoUpdater.on("update-available", (info) => sendUpdateStatusToWindow(`Atualização disponível (v${info.version}). Baixando...`));
 autoUpdater.on("update-not-available", () => sendUpdateStatusToWindow(""));
-autoUpdater.on("error", (err) => sendUpdateStatusToWindow(`Erro na atualização: ${err.toString()
-    }`));
-autoUpdater.on("download-progress", (p) => sendUpdateStatusToWindow(`Baixando atualização: ${Math.round(p.percent)
-    }%`));
+autoUpdater.on("error", (err) => sendUpdateStatusToWindow(`Erro na atualização: ${err.toString()}`));
+autoUpdater.on("download-progress", (p) => sendUpdateStatusToWindow(`Baixando atualização: ${Math.round(p.percent)}%`));
 autoUpdater.on("update-downloaded", (info) => {
-    sendUpdateStatusToWindow(`Atualização v${info.version
-        } baixada. Reinicie para instalar.`);
+    sendUpdateStatusToWindow(`Atualização v${info.version} baixada. Reinicie para instalar.`);
     if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.executeJavaScript(`
             const um = document.getElementById("update-message");
@@ -52,6 +116,10 @@ ipcMain.on('open-path', (event, filePath) => {
 });
 
 async function runPhoneAdjustment(filePath, event, backup) {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        return;
+    }
     const log = (msg) => event.sender.send("log", msg);
     if (!filePath || !fs.existsSync(filePath)) {
         log(`❌ Erro: Arquivo para ajuste de fones não encontrado em: ${filePath}`);
@@ -108,13 +176,10 @@ async function runPhoneAdjustment(filePath, event, backup) {
 }
 
 try {
-    // A inicialização fica vazia. A biblioteca irá procurar
-    // a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS automaticamente.
     initializeApp();
 } catch (error) {
     console.error("ERRO FATAL: Falha ao inicializar o Firebase. Verifique as credenciais.", error);
     dialog.showErrorBox("Erro Crítico", "As credenciais do Firebase não foram encontradas ou são inválidas. A aplicação será encerrada.");
-    // Garante que o app feche se houver erro de credencial
     if (app) {
       app.quit();
     }
@@ -127,6 +192,7 @@ const rootCollection = db.collection("Raiz");
 let storedCnpjs = new Set();
 
 async function loadStoredCnpjs() {
+    if (!isAdmin()) return; // Verificação de permissão
     try {
         const snapshot = await cnpjsCollection.get();
         storedCnpjs = new Set(snapshot.docs.map(doc => doc.id));
@@ -145,7 +211,8 @@ async function loadStoredCnpjs() {
     }
 }
 
-function createWindow() {
+// MODIFICADO: Agora cria a janela principal
+function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 900,
@@ -156,13 +223,28 @@ function createWindow() {
         }
     });
     mainWindow.loadFile("index.html");
+    
+    // MODIFICADO: Envia dados do usuário para a janela principal
     mainWindow.webContents.on("did-finish-load", () => {
-        loadStoredCnpjs();
+        if (currentUser) {
+            mainWindow.webContents.send('user-info', currentUser);
+        }
+        if (isAdmin()) { // Apenas admin pode carregar dados do DB
+            loadStoredCnpjs();
+        }
         autoUpdater.checkForUpdatesAndNotify();
+    });
+
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+        if (process.platform !== 'darwin') {
+            app.quit();
+        }
     });
 }
 
 ipcMain.on("prepare-enrichment-files", async (event, filePaths) => {
+    if (!isAdmin()) return; // Verificação de permissão
     const log = (msg) => event.sender.send("enrichment-log", msg);
     for (const filePath of filePaths) {
         log(`Preparando arquivo: ${path.basename(filePath)
@@ -210,13 +292,17 @@ ipcMain.on("prepare-enrichment-files", async (event, filePaths) => {
     }
 });
 
-app.whenReady().then(createWindow);
-app.on("window-all-closed", () => {
-    if (process.platform !== "darwin")
-        app.quit();
+// MODIFICADO: Inicia com a janela de login
+app.whenReady().then(createLoginWindow);
 
+app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+        currentUser = null; // Limpa o usuário ao fechar
+        app.quit();
+    }
 });
 
+// Verificação de permissão adicionada
 ipcMain.handle("select-file", async (event, {
     title,
     multi
@@ -266,8 +352,16 @@ function writeSpreadsheet(workbook, filePath) {
     XLSX.writeFile(workbook, filePath);
 }
 
-ipcMain.handle("get-enriched-cnpj-count", async () => (await enrichmentCollection.get()).size);
+// Verificação de permissão adicionada
+ipcMain.handle("get-enriched-cnpj-count", async () => {
+    if (!isAdmin()) return 0;
+    return (await enrichmentCollection.get()).size
+});
+// Verificação de permissão adicionada
 ipcMain.handle("download-enriched-data", async () => {
+    if (!isAdmin()) {
+        return { success: false, message: "Acesso negado: Permissão de administrador necessária." };
+    }
     try {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: "Salvar Dados Enriquecidos",
@@ -318,8 +412,13 @@ ipcMain.handle("download-enriched-data", async () => {
         };
     }
 });
-
+// Verificação de permissão adicionada
 ipcMain.on("start-db-load", async (event, { masterFiles }) => {
+    if (!isAdmin()) {
+        event.sender.send("enrichment-log", "❌ Acesso negado: Permissão de administrador necessária.");
+        event.sender.send("db-load-finished");
+        return;
+    }
     const log = (msg) => event.sender.send("enrichment-log", msg);
     const progress = (current, total, fileName, cnpjsProcessed) => event.sender.send("db-load-progress", {
         current,
@@ -434,6 +533,12 @@ async function runEnrichmentProcess({
     strategy,
     backup
 }, log, progress, onFinish) {
+    if (!isAdmin()){ // Verificação de permissão
+        log("❌ Acesso negado: Permissão de administrador necessária.");
+        if(onFinish) onFinish();
+        return;
+    }
+
     log("--- Iniciando Processo de Enriquecimento por Lotes ---");
     let totalEnrichedRowsOverall = 0, totalProcessedRowsOverall = 0, totalNotFoundInDbOverall = 0;
     const BATCH_SIZE = 2000;
@@ -574,6 +679,11 @@ async function runEnrichmentProcess({
 }
 
 ipcMain.on("start-enrichment", async (event, options) => {
+    if (!isAdmin()) { // Verificação de permissão
+         event.sender.send("enrichment-log", "❌ Acesso negado: Permissão de administrador necessária.");
+         event.sender.send("enrichment-finished");
+         return;
+    }
     await runEnrichmentProcess(options, (msg) => event.sender.send("enrichment-log", msg), (id, pct, eta) => event.sender.send("enrichment-progress", {
         id,
         progress: pct,
@@ -585,23 +695,25 @@ ipcMain.on("start-enrichment", async (event, options) => {
 // #################################################################
 // #           NOVO HANDLER PARA A ABA DE MONITORAMENTO            #
 // #################################################################
+// ESTA FUNÇÃO É PÚBLICA (acessível a todos os usuários logados)
 ipcMain.handle('fetch-monitoring-report', async (event, url) => {
+    if (!currentUser) { // Precisa estar logado
+         return { success: false, message: 'Acesso negado. Faça o login.' };
+    }
     console.log(`Buscando relatório do endpoint: ${url}`);
     try {
         const response = await axios.get(url, {
-            timeout: 4000000, // 90 segundos
+            timeout: 4000000, 
             headers: {
-                // Adicione o User-Agent do Postman aqui
-                'User-Agent': 'PostmanRuntime/7.44.1' // Use o valor exato que você viu no console do Postman
+                'User-Agent': 'PostmanRuntime/7.44.1'
             }
         });
         if (response.status === 200) {
-            // A API pode retornar uma string "Nenhum registro encontrado" em vez de um JSON vazio
             if (typeof response.data === 'string' && response.data.includes("Nenhum registro encontrado")) {
                 return {
                     success: true,
                     data: []
-                }; // Retorna array vazio para consistência
+                }; 
             }
             return {
                 success: true,
@@ -630,6 +742,11 @@ ipcMain.handle('fetch-monitoring-report', async (event, url) => {
 // #################################################################
 
 ipcMain.on("feed-root-database", async (event, filePaths) => {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        event.sender.send("root-feed-finished");
+        return;
+    }
     const log = (msg) => event.sender.send("log", msg);
 
     log(`--- Iniciando Alimentação da Base Raiz ---`);
@@ -795,84 +912,49 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
 // #################################################################
 
 ipcMain.handle("save-stored-cnpjs-to-excel", async (event) => {
+    if (!isAdmin()) { // Verificação de permissão
+        return { success: false, message: "Acesso negado." };
+    }
     if (storedCnpjs.size === 0) {
-        dialog.showMessageBox(mainWindow, {
-            type: "info",
-            title: "Aviso",
-            message: "Nenhum CNPJ armazenado para salvar."
-        });
-        return {
-            success: false,
-            message: "Nenhum CNPJ armazenado para salvar."
-        };
+        dialog.showMessageBox(mainWindow, { type: "info", title: "Aviso", message: "Nenhum CNPJ armazenado para salvar." });
+        return { success: false, message: "Nenhum CNPJ armazenado para salvar." };
     }
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
         title: "Salvar CNPJs Armazenados",
-        defaultPath: `cnpjs_armazenados_${Date.now()
-            }.xlsx`,
-        filters: [
-            {
-                name: "Excel Files",
-                extensions: ["xlsx"]
-            }
-        ]
+        defaultPath: `cnpjs_armazenados_${Date.now()}.xlsx`,
+        filters: [ { name: "Excel Files", extensions: ["xlsx"] } ]
     });
     if (canceled || !filePath) {
-        return {
-            success: false,
-            message: "Operação de salvar cancelada."
-        };
+        return { success: false, message: "Operação de salvar cancelada." };
     }
     try {
         const data = Array.from(storedCnpjs).map(cnpj => [cnpj]);
-        const worksheet = XLSX.utils.aoa_to_sheet([
-            ["cpf"],
-            ...data
-        ]);
+        const worksheet = XLSX.utils.aoa_to_sheet([ ["cpf"], ...data ]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "CNPJs");
         XLSX.writeFile(workbook, filePath);
-        dialog.showMessageBox(mainWindow, {
-            type: "info",
-            title: "Sucesso",
-            message: `Arquivo salvo com sucesso em: ${filePath}`
-        });
-        return {
-            success: true,
-            message: `Arquivo salvo com sucesso em: ${filePath}`
-        };
+        dialog.showMessageBox(mainWindow, { type: "info", title: "Sucesso", message: `Arquivo salvo com sucesso em: ${filePath}` });
+        return { success: true, message: `Arquivo salvo com sucesso em: ${filePath}` };
     } catch (err) {
         console.error("Erro ao salvar Excel:", err);
-        dialog.showMessageBox(mainWindow, {
-            type: "error",
-            title: "Erro",
-            message: `Erro ao salvar arquivo: ${err.message
-                }`
-        });
-        return {
-            success: false,
-            message: `Erro ao salvar arquivo: ${err.message
-                }`
-        };
+        dialog.showMessageBox(mainWindow, { type: "error", title: "Erro", message: `Erro ao salvar arquivo: ${err.message}` });
+        return { success: false, message: `Erro ao salvar arquivo: ${err.message}` };
     }
 });
 
 ipcMain.handle("delete-batch", async (event, batchId) => {
+    if (!isAdmin()) { // Verificação de permissão
+        return { success: false, message: "Acesso negado." };
+    }
     const log = (msg) => event.sender.send("log", msg);
     if (!batchId) {
-        return {
-            success: false,
-            message: "ID do lote inválido."
-        };
+        return { success: false, message: "ID do lote inválido." };
     }
     log(`Buscando documentos do lote "${batchId}" no Firestore...`);
     try {
         const querySnapshot = await cnpjsCollection.where("batchId", "==", batchId).get();
         if (querySnapshot.empty) {
-            return {
-                success: false,
-                message: `Nenhum CNPJ encontrado para o lote "${batchId}". Verifique o ID.`
-            };
+            return { success: false, message: `Nenhum CNPJ encontrado para o lote "${batchId}". Verifique o ID.` };
         }
         const count = querySnapshot.size;
         log(`Encontrados ${count} CNPJs para exclusão. Removendo em lotes...`);
@@ -889,35 +971,27 @@ ipcMain.handle("delete-batch", async (event, batchId) => {
                 firestoreBatch.delete(docRef);
             });
             await firestoreBatch.commit();
-            log(`Lote parcial de ${chunk.length
-                } registros excluído...`);
+            log(`Lote parcial de ${chunk.length} registros excluído...`);
         }
-        log(`Total de CNPJs no cache local agora: ${storedCnpjs.size
-            }`);
-        return {
-            success: true,
-            message: `✅ ${count} CNPJs do lote "${batchId}" foram excluídos com sucesso!`
-        };
+        log(`Total de CNPJs no cache local agora: ${storedCnpjs.size}`);
+        return { success: true, message: `✅ ${count} CNPJs do lote "${batchId}" foram excluídos com sucesso!` };
     } catch (err) {
         console.error("Erro ao excluir lote do Firestore:", err);
-        return {
-            success: false,
-            message: `❌ Erro ao excluir lote: ${err.message
-                }`
-        };
+        return { success: false, message: `❌ Erro ao excluir lote: ${err.message}` };
     }
 });
 
 ipcMain.handle("update-blocklist", async (event, backup) => {
+    if (!isAdmin()) { // Verificação de permissão
+        return { success: false, message: "Acesso negado." };
+    }
     const log = (msg) => event.sender.send("log", msg);
     try {
         const blocklistPath = "G:\\Meu Drive\\Marketing\\!Campanhas\\URA - Automatica\\Limpeza de base\\bases para a raiz\\Blocklist.xlsx";
         const rootPath = "G:\\Meu Drive\\Marketing\\!Campanhas\\URA - Automatica\\Limpeza de base\\raiz_att.xlsx";
         if (backup) {
             const timestamp = Date.now();
-            const bkp = path.join(path.dirname(rootPath), `${path.basename(rootPath, path.extname(rootPath))
-                }.backup_${timestamp}${path.extname(rootPath)
-                }`);
+            const bkp = path.join(path.dirname(rootPath), `${path.basename(rootPath, path.extname(rootPath))}.backup_${timestamp}${path.extname(rootPath)}`);
             fs.copyFileSync(rootPath, bkp);
             log(`Backup da raiz criado em: ${bkp}`);
         }
@@ -925,92 +999,60 @@ ipcMain.handle("update-blocklist", async (event, backup) => {
         const dataBlock = XLSX.utils.sheet_to_json(wbBlock.Sheets[wbBlock.SheetNames[0]], { header: 1 }).flat().filter(v => v);
         const wbRoot = await readSpreadsheet(rootPath);
         const dataRoot = XLSX.utils.sheet_to_json(wbRoot.Sheets[wbRoot.SheetNames[0]], { header: 1 }).flat().filter(v => v);
-        const merged = Array.from(new Set([
-            ...dataRoot,
-            ...dataBlock
-        ])).map(v => [v]);
+        const merged = Array.from(new Set([...dataRoot, ...dataBlock])).map(v => [v]);
         const newWB = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(newWB, XLSX.utils.aoa_to_sheet(merged), wbRoot.SheetNames[0]);
         writeSpreadsheet(newWB, rootPath);
-        return {
-            success: true,
-            message: "Raiz atualizada com blocklist com sucesso."
-        };
+        return { success: true, message: "Raiz atualizada com blocklist com sucesso." };
     } catch (err) {
-        return {
-            success: false,
-            message: err.message
-        };
+        return { success: false, message: err.message };
     }
 });
 
-ipcMain.on("start-cleaning", async (event, {
-    isAutoRoot,
-    rootFile,
-    cleanFiles,
-    rootCol,
-    destCol,
-    backup,
-    checkDb,
-    saveToDb,
-    autoAdjust
-}) => {
+ipcMain.on("start-cleaning", async (event, args) => {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        return;
+    }
+    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
     try {
-        const batchId = `batch-${Date.now()
-            }`;
-        if (saveToDb)
-            log(`Este lote de salvamento terá o ID: ${batchId}`);
-
-
+        const batchId = `batch-${Date.now()}`;
+        if (args.saveToDb) log(`Este lote de salvamento terá o ID: ${batchId}`);
         const rootSet = new Set();
-        if (isAutoRoot) {
+        if (args.isAutoRoot) {
             log("Auto Raiz ATIVADO. Carregando lista raiz do Banco de Dados...");
             const snapshot = await rootCollection.get();
             snapshot.forEach(doc => rootSet.add(doc.id));
-            log(`✅ Raiz do BD carregada. Total de CNPJs na raiz: ${snapshot.size
-                }.`);
+            log(`✅ Raiz do BD carregada. Total de CNPJs na raiz: ${snapshot.size}.`);
         } else {
-            if (!rootFile || !fs.existsSync(rootFile)) {
-                return log(`❌ Arquivo raiz não encontrado: ${rootFile}`);
+            if (!args.rootFile || !fs.existsSync(args.rootFile)) {
+                return log(`❌ Arquivo raiz não encontrado: ${args.rootFile}`);
             }
-            const rootIdx = letterToIndex(rootCol);
-            const wbRoot = await readSpreadsheet(rootFile);
+            const rootIdx = letterToIndex(args.rootCol);
+            const wbRoot = await readSpreadsheet(args.rootFile);
             const sheetRoot = wbRoot.Sheets[wbRoot.SheetNames[0]];
             const rowsRoot = XLSX.utils.sheet_to_json(sheetRoot, { header: 1 }).map(r => r[rootIdx]).filter(v => v).map(v => String(v).trim());
             rowsRoot.forEach(item => rootSet.add(item));
-            log(`Lista raiz do arquivo carregada com ${rootSet.size
-                } valores.`);
+            log(`Lista raiz do arquivo carregada com ${rootSet.size} valores.`);
         }
-
-        log(`Histórico de CNPJs em memória com ${storedCnpjs.size
-            } registros.`);
-        if (checkDb)
-            log("Opção \"Consultar Banco de Dados\" está ATIVADA.");
-
-        if (saveToDb)
-            log("Opção \"Salvar no Banco de Dados\" está ATIVADA.");
-
-        if (autoAdjust)
-            log("Opção \"Ajustar Fones Pós-Limpeza\" está ATIVADA.");
-
+        log(`Histórico de CNPJs em memória com ${storedCnpjs.size} registros.`);
+        if (args.checkDb) log("Opção \"Consultar Banco de Dados\" está ATIVADA.");
+        if (args.saveToDb) log("Opção \"Salvar no Banco de Dados\" está ATIVADA.");
+        if (args.autoAdjust) log("Opção \"Ajustar Fones Pós-Limpeza\" está ATIVADA.");
 
         const allNewCnpjs = new Set();
-
-        for (const fileObj of cleanFiles) {
-            const newlyFoundInFile = await processFile(fileObj, rootSet, destCol, event, backup, checkDb, saveToDb, storedCnpjs);
-            if (saveToDb && newlyFoundInFile.size > 0) {
+        for (const fileObj of args.cleanFiles) {
+            const newlyFoundInFile = await processFile(fileObj, rootSet, args.destCol, event, args.backup, args.checkDb, args.saveToDb, storedCnpjs);
+            if (args.saveToDb && newlyFoundInFile.size > 0) {
                 newlyFoundInFile.forEach(cnpj => allNewCnpjs.add(cnpj));
             }
-
-            if (autoAdjust) {
+            if (args.autoAdjust) {
                 await runPhoneAdjustment(fileObj.path, event, false);
             }
         }
-
-        if (saveToDb && allNewCnpjs.size > 0) {
-            log(`\nEnviando ${allNewCnpjs.size
-                } novos CNPJs para o banco de dados em lotes...`);
+        if (args.saveToDb && allNewCnpjs.size > 0) {
+            log(`\nEnviando ${allNewCnpjs.size} novos CNPJs para o banco de dados em lotes...`);
             const cnpjsArray = Array.from(allNewCnpjs);
             const batchSize = 499;
             const totalBatches = Math.ceil(cnpjsArray.length / batchSize);
@@ -1019,34 +1061,25 @@ ipcMain.on("start-cleaning", async (event, {
                 const batch = db.batch();
                 chunk.forEach(cnpj => {
                     const docRef = cnpjsCollection.doc(cnpj);
-                    batch.set(docRef, {
-                        numero: cnpj,
-                        adicionado_em: new Date(),
-                        batchId: batchId
-                    });
+                    batch.set(docRef, { numero: cnpj, adicionado_em: new Date(), batchId: batchId });
                     storedCnpjs.add(cnpj);
                 });
                 await batch.commit();
                 const currentBatchNum = Math.floor(i / batchSize) + 1;
-                event.sender.send("upload-progress", {
-                    current: currentBatchNum,
-                    total: totalBatches
-                });
+                event.sender.send("upload-progress", { current: currentBatchNum, total: totalBatches });
             }
-            log(`✅ Banco de dados atualizado. Total agora: ${storedCnpjs.size
-                } registros.`);
+            log(`✅ Banco de dados atualizado. Total agora: ${storedCnpjs.size} registros.`);
             log(`✅ ID do Lote salvo: ${batchId} (use este ID para futuras exclusões)`);
         }
-
         log(`\n✅ Processo concluído para todos os arquivos.`);
     } catch (err) {
-        log(`❌ Erro inesperado no processo de limpeza: ${err.message
-            }`);
+        log(`❌ Erro inesperado no processo de limpeza: ${err.message}`);
         console.error(err);
     }
 });
 
 async function processFile(fileObj, rootSet, destCol, event, backup, checkDb, saveToDb, cnpjsHistory) {
+    // ... (código original sem alterações, pois já é chamado por uma função protegida)
     const file = fileObj.path;
     const id = fileObj.id;
     const log = (msg) => event.sender.send("log", msg);
@@ -1133,68 +1166,47 @@ async function processFile(fileObj, rootSet, destCol, event, backup, checkDb, sa
 }
 
 ipcMain.on("start-db-only-cleaning", async (event, { filesToClean, saveToDb }) => {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        return;
+    }
+    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
-    const batchId = `batch-${Date.now()
-        }`;
-    log(`--- Iniciando Limpeza Apenas pelo Banco de Dados para ${filesToClean.length
-        } arquivo(s) ---`);
-    if (saveToDb)
-        log(`Opção \"Salvar no Banco de Dados\" ATIVADA. ID do Lote: ${batchId}`);
-
-
-    log(`Usando ${storedCnpjs.size
-        } CNPJs do histórico em memória.`);
+    const batchId = `batch-${Date.now()}`;
+    log(`--- Iniciando Limpeza Apenas pelo Banco de Dados para ${filesToClean.length} arquivo(s) ---`);
+    if (saveToDb) log(`Opção \"Salvar no Banco de Dados\" ATIVADA. ID do Lote: ${batchId}`);
+    log(`Usando ${storedCnpjs.size} CNPJs do histórico em memória.`);
     const allNewCnpjs = new Set();
-
     for (const filePath of filesToClean) {
-        log(`\nProcessando: ${path.basename(filePath)
-            }`);
+        log(`\nProcessando: ${path.basename(filePath)}`);
         try {
             const wb = await readSpreadsheet(filePath);
             const sheet = wb.Sheets[wb.SheetNames[0]];
             const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            if (data.length <= 1) {
-                log(`⚠️ Arquivo vazio ou sem dados: ${filePath}`);
-                continue;
-            }
+            if (data.length <= 1) { log(`⚠️ Arquivo vazio ou sem dados: ${filePath}`); continue; }
             const header = data[0];
             const cpfColIdx = header.findIndex(h => String(h).trim().toLowerCase() === "cpf");
-            if (cpfColIdx === -1) {
-                log(`❌ ERRO: A coluna \"cpf\" não foi encontrada em ${path.basename(filePath)
-                    }. Pulando.`);
-                continue;
-            }
+            if (cpfColIdx === -1) { log(`❌ ERRO: A coluna \"cpf\" não foi encontrada em ${path.basename(filePath)}. Pulando.`); continue; }
             let removedCount = 0;
             const cleaned = [header];
             for (let i = 1; i < data.length; i++) {
                 const row = data[i];
                 const cnpj = row[cpfColIdx] ? String(row[cpfColIdx]).trim().replace(/\D/g, "") : "";
-                if (cnpj && storedCnpjs.has(cnpj)) {
-                    removedCount++;
-                    continue;
-                }
+                if (cnpj && storedCnpjs.has(cnpj)) { removedCount++; continue; }
                 cleaned.push(row);
-                if (saveToDb && cnpj) {
-                    allNewCnpjs.add(cnpj);
-                }
+                if (saveToDb && cnpj) { allNewCnpjs.add(cnpj); }
             }
             const newWB = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(newWB, XLSX.utils.aoa_to_sheet(cleaned), wb.SheetNames[0]);
             writeSpreadsheet(newWB, filePath);
-            log(`✅ Arquivo ${path.basename(filePath)
-                } concluído. Removidos: ${removedCount}. Total final: ${cleaned.length - 1
-                }`);
+            log(`✅ Arquivo ${path.basename(filePath)} concluído. Removidos: ${removedCount}. Total final: ${cleaned.length - 1}`);
         } catch (err) {
-            log(`❌ Erro ao processar ${path.basename(filePath)
-                }: ${err.message
-                }`);
+            log(`❌ Erro ao processar ${path.basename(filePath)}: ${err.message}`);
             console.error(err);
         }
     }
-
     if (saveToDb && allNewCnpjs.size > 0) {
-        log(`\nEnviando ${allNewCnpjs.size
-            } novos CNPJs (não encontrados no BD) para o banco de dados...`);
+        log(`\nEnviando ${allNewCnpjs.size} novos CNPJs (não encontrados no BD) para o banco de dados...`);
         const cnpjsArray = Array.from(allNewCnpjs);
         const batchSize = 499;
         const totalBatches = Math.ceil(cnpjsArray.length / batchSize);
@@ -1203,48 +1215,37 @@ ipcMain.on("start-db-only-cleaning", async (event, { filesToClean, saveToDb }) =
             const batch = db.batch();
             chunk.forEach(cnpj => {
                 const docRef = cnpjsCollection.doc(cnpj);
-                batch.set(docRef, {
-                    numero: cnpj,
-                    adicionado_em: new Date(),
-                    batchId: batchId
-                });
+                batch.set(docRef, { numero: cnpj, adicionado_em: new Date(), batchId: batchId });
                 storedCnpjs.add(cnpj);
             });
             await batch.commit();
             const currentBatchNum = Math.floor(i / batchSize) + 1;
-            event.sender.send("upload-progress", {
-                current: currentBatchNum,
-                total: totalBatches
-            });
+            event.sender.send("upload-progress", { current: currentBatchNum, total: totalBatches });
         }
-        log(`✅ Banco de dados atualizado. Total agora: ${storedCnpjs.size
-            } registros.`);
+        log(`✅ Banco de dados atualizado. Total agora: ${storedCnpjs.size} registros.`);
         log(`✅ ID do Lote salvo: ${batchId} (use este ID para futuras exclusões)`);
     }
-
     log("\n--- Limpeza Apenas pelo Banco de Dados finalizada. ---");
 });
 
 ipcMain.on("start-merge", async (event, files) => {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        return;
+    }
+    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
     if (!files || files.length < 2) {
         log("❌ Erro: Por favor, selecione pelo menos dois arquivos para mesclar.");
         dialog.showErrorBox("Erro de Mesclagem", "Você precisa selecionar no mínimo dois arquivos para a mesclagem.");
         return;
     }
-    log(`\n--- Iniciando Mesclagem de ${files.length
-        } arquivos ---`);
+    log(`\n--- Iniciando Mesclagem de ${files.length} arquivos ---`);
     try {
         const { canceled, filePath: savePath } = await dialog.showSaveDialog(mainWindow, {
             title: "Salvar Arquivo Mesclado",
-            defaultPath: `mesclado_${Date.now()
-                }.xlsx`,
-            filters: [
-                {
-                    name: "Planilhas Excel",
-                    extensions: ["xlsx"]
-                }
-            ]
+            defaultPath: `mesclado_${Date.now()}.xlsx`,
+            filters: [{ name: "Planilhas Excel", extensions: ["xlsx"] }]
         });
         if (canceled || !savePath) {
             log("Operação de mesclagem cancelada pelo usuário.");
@@ -1254,37 +1255,25 @@ ipcMain.on("start-merge", async (event, files) => {
         let allDataRows = [];
         let totalRows = 0;
         const firstFilePath = files[0];
-        log(`Lendo arquivo base: ${path.basename(firstFilePath)
-            }`);
+        log(`Lendo arquivo base: ${path.basename(firstFilePath)}`);
         const firstWb = await readSpreadsheet(firstFilePath);
         const firstWs = firstWb.Sheets[firstWb.SheetNames[0]];
-        const firstFileData = XLSX.utils.sheet_to_json(firstWs, {
-            header: 1,
-            defval: ""
-        });
+        const firstFileData = XLSX.utils.sheet_to_json(firstWs, { header: 1, defval: "" });
         allDataRows.push(...firstFileData);
         totalRows += firstFileData.length;
-        log(`Adicionadas ${firstFileData.length
-            } linhas (com cabeçalho) do arquivo base.`);
+        log(`Adicionadas ${firstFileData.length} linhas (com cabeçalho) do arquivo base.`);
         for (let i = 1; i < files.length; i++) {
             const filePath = files[i];
-            log(`Lendo arquivo para anexar: ${path.basename(filePath)
-                }`);
+            log(`Lendo arquivo para anexar: ${path.basename(filePath)}`);
             const wb = await readSpreadsheet(filePath);
             const ws = wb.Sheets[wb.SheetNames[0]];
-            const fileData = XLSX.utils.sheet_to_json(ws, {
-                header: 1,
-                defval: ""
-            }).slice(1);
+            const fileData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }).slice(1);
             if (fileData.length > 0) {
                 allDataRows.push(...fileData);
                 totalRows += fileData.length;
-                log(`Adicionadas ${fileData.length
-                    } linhas de dados de ${path.basename(filePath)
-                    }.`);
+                log(`Adicionadas ${fileData.length} linhas de dados de ${path.basename(filePath)}.`);
             } else {
-                log(`⚠️ Arquivo ${path.basename(filePath)
-                    } não continha dados além do cabeçalho.`);
+                log(`⚠️ Arquivo ${path.basename(filePath)} não continha dados além do cabeçalho.`);
             }
         }
         log(`\nTotal de linhas a serem escritas: ${totalRows}. Criando o arquivo final...`);
@@ -1293,56 +1282,50 @@ ipcMain.on("start-merge", async (event, files) => {
         XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "Mesclado");
         writeSpreadsheet(newWorkbook, savePath);
         log(`✅ Mesclagem concluída com sucesso! O arquivo foi salvo em: ${savePath}`);
-        dialog.showMessageBox(mainWindow, {
-            type: "info",
-            title: "Sucesso",
-            message: `Arquivos mesclados com sucesso!\n\nO resultado foi salvo em:\n${savePath}`
-        });
+        dialog.showMessageBox(mainWindow, { type: "info", title: "Sucesso", message: `Arquivos mesclados com sucesso!\n\nO resultado foi salvo em:\n${savePath}` });
     } catch (err) {
-        log(`❌ Erro catastrófico durante a mesclagem: ${err.message
-            }`);
+        log(`❌ Erro catastrófico durante a mesclagem: ${err.message}`);
         console.error(err);
-        dialog.showErrorBox("Erro de Mesclagem", `Ocorreu um erro inesperado: ${err.message
-            }`);
+        dialog.showErrorBox("Erro de Mesclagem", `Ocorreu um erro inesperado: ${err.message}`);
     }
 });
 
-ipcMain.on("start-adjust-phones", async (event, { filePath, backup }) => {
+ipcMain.on("start-adjust-phones", async (event, args) => {
+    if (!isAdmin()) { // Verificação de permissão
+        event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
+        return;
+    }
     const log = (msg) => event.sender.send("log", msg);
-    log(`\n--- Iniciando Ajuste de Fones para ${path.basename(filePath)
-        } ---`);
-    await runPhoneAdjustment(filePath, event, backup);
+    log(`\n--- Iniciando Ajuste de Fones para ${path.basename(args.filePath)} ---`);
+    await runPhoneAdjustment(args.filePath, event, args.backup);
     log(`\n✅ Ajuste de fones concluído para o arquivo.`);
 });
 
-let apiQueue = {
-    pending: [],
-    processing: null,
-    completed: []
-};
+let apiQueue = { pending: [], processing: null, completed: [] };
 let isApiQueueRunning = false;
+
 ipcMain.on("add-files-to-api-queue", (event, filePaths) => {
+    if (!isAdmin()) return;
     apiQueue.pending.push(...filePaths);
     apiQueue.pending = [... new Set(apiQueue.pending)];
     event.sender.send("api-queue-update", apiQueue);
 });
-ipcMain.on("start-api-queue", (event, { keyMode }) => {
-    if (isApiQueueRunning)
-        return;
 
+ipcMain.on("start-api-queue", (event, { keyMode }) => {
+    if (!isAdmin()) return;
+    if (isApiQueueRunning) return;
     isApiQueueRunning = true;
     processNextInApiQueue(event, keyMode);
 });
+
 ipcMain.on("reset-api-queue", (event) => {
-    apiQueue = {
-        pending: [],
-        processing: null,
-        completed: []
-    };
+    if (!isAdmin()) return;
+    apiQueue = { pending: [], processing: null, completed: [] };
     isApiQueueRunning = false;
     event.sender.send("api-queue-update", apiQueue);
     event.sender.send("api-log", "Fila e status reiniciados.");
 });
+
 async function processNextInApiQueue(event, keyMode) {
     if (apiQueue.pending.length === 0) {
         event.sender.send("api-log", "\n✅ Fila de processamento concluída.");
@@ -1353,11 +1336,8 @@ async function processNextInApiQueue(event, keyMode) {
     }
     apiQueue.processing = apiQueue.pending.shift();
     event.sender.send("api-queue-update", apiQueue);
-
-    event.sender.send("api-log", `--- Iniciando processamento de: ${path.basename(apiQueue.processing)
-        } ---`);
+    event.sender.send("api-log", `--- Iniciando processamento de: ${path.basename(apiQueue.processing)} ---`);
     await runApiConsultation(apiQueue.processing, keyMode, (msg) => event.sender.send("api-log", msg), (current, total) => event.sender.send("api-progress", { current, total }));
-
     apiQueue.completed.push(apiQueue.processing);
     apiQueue.processing = null;
     event.sender.send("api-queue-update", apiQueue);
@@ -1365,6 +1345,7 @@ async function processNextInApiQueue(event, keyMode) {
 }
 
 async function runApiConsultation(filePath, keyMode, log, progress) {
+    // ... (código original da função sem alterações)
     const credentials = {
         c6: {
             CLIENT_ID: "EA8ZUFeZVSeqMGr49XJSsZKFuxSZub3i",

@@ -590,10 +590,10 @@
             <p id="current-tab-description"></p>
         </div>
         <div class="tabs">
-            <button class="tab-button">Limpeza Local</button>
-            <button class="tab-button">Consulta CNPJ (API)</button>
-            <button class="tab-button">Enriquecimento</button>
-            <button class="tab-button">Monitoramento</button>
+            <button class="tab-button" data-tab-name="local">Limpeza Local</button>
+            <button class="tab-button" data-tab-name="api">Consulta CNPJ (API)</button>
+            <button class="tab-button" data-tab-name="enriquecimento">Enriquecimento</button>
+            <button class="tab-button" data-tab-name="monitoramento">Monitoramento</button>
         </div>
 
         <div id="local" class="tab-content">
@@ -937,7 +937,7 @@
 
     <script src="renderer.js"></script>
     <footer>
-        <p>Criador: Davi Abraão | Versão: 2.2</p>
+        <p>Usuário: <span id="currentUser" style="font-weight: bold;"></span> | Criador: Davi Abraão | Versão: 2.2</p>
         <div id="update-message"></div>
     </footer>
 </body>

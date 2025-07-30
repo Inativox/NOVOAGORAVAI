@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Gerenciador de Bases</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0b0f;
+            --bg-light: #1a1d23;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --danger-color: #ef4444;
+            --border-color: #374151;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-accent: rgba(59, 130, 246, 0.25);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0f1419 100%);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            -webkit-app-region: drag;
+        }
+        #login-container {
+            background: var(--bg-light);
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px -5px var(--shadow-color);
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            -webkit-app-region: no-drag;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px var(--shadow-accent);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        #error-message {
+            color: var(--danger-color);
+            margin-top: 15px;
+            font-size: 14px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <h1>Login</h1>
+        <div class="input-group">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" required>
+        </div>
+        <div class="input-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" required>
+        </div>
+        <button id="login-btn">Entrar</button>
+        <p id="error-message"></p>
+    </div>
+
+    <script>
+        // Este script é executado na janela de login
+        const loginBtn = document.getElementById('login-btn');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('error-message');
+
+        const attemptLogin = async () => {
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+            errorMessage.textContent = '';
+
+            if (!username || !password) {
+                errorMessage.textContent = 'Preencha todos os campos.';
+                return;
+            }
+
+            // Envia os dados para o processo principal (main.js) para verificação
+            const result = await window.electronAPI.loginAttempt(username, password);
+
+            if (!result.success) {
+                errorMessage.textContent = result.message;
+            }
+            // Se o login for bem-sucedido, o processo principal fechará esta janela
+            // e abrirá a janela principal da aplicação.
+        };
+
+        loginBtn.addEventListener('click', attemptLogin);
+        
+        // Permite o login pressionando Enter
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+    </script>
+</body>
+</html>

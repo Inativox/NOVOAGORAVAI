@@ -7,6 +7,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTabDescription = document.getElementById('current-tab-description');
     const mainTitle = document.getElementById("main-app-title");
 
+    // #################################################################
+    // #           NOVO: LÓGICA DE LOGIN E PERMISSÕES NO RENDERER      #
+    // #################################################################
+
+    // Recebe os dados do usuário do processo principal após o login
+    window.electronAPI.onUserInfo(({ username, role }) => {
+        // Atualiza o nome do usuário no rodapé
+        const currentUserSpan = document.getElementById('currentUser');
+        if (currentUserSpan) {
+            currentUserSpan.textContent = username;
+        }
+        // Configura a interface com base na permissão do usuário
+        setupUIForRole(role);
+    });
+
+    // Função que esconde/mostra elementos com base na permissão
+    function setupUIForRole(role) {
+        if (role === 'admin') {
+            // Admin tem acesso a tudo, então abrimos a primeira aba por padrão
+            const adminDefaultTab = document.querySelector('.tab-button[data-tab-name="local"]');
+            if (adminDefaultTab) {
+                adminDefaultTab.click();
+            }
+        } else if (role === 'limited') {
+            // Usuário limitado só pode ver a aba de Monitoramento
+            tabButtons.forEach(button => {
+                const tabName = button.dataset.tabName;
+                if (tabName !== 'monitoramento') {
+                    button.style.display = 'none'; // Esconde os outros botões de aba
+                }
+            });
+
+            // Clica programaticamente na aba de Monitoramento para torná-la a única visível
+            const monitoringTabButton = document.querySelector('.tab-button[data-tab-name="monitoramento"]');
+            if (monitoringTabButton) {
+                monitoringTabButton.click();
+            }
+        }
+    }
+
+
     window.electronAPI.onUpdateMessage((message) => {
         const updateMessageElement = document.getElementById('update-message');
         if (updateMessageElement) {
@@ -155,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body.classList.add('monitoring-theme');
         }
 
-        const tabButtonText = evt ? evt.currentTarget.textContent.trim() : tabButtons[0].textContent.trim();
+        const tabButtonText = evt ? evt.currentTarget.textContent.trim() : '';
         if (tabInfo[tabButtonText]) {
             mainTitle.classList.add("hidden");
             currentTabTitle.textContent = tabInfo[tabButtonText].title;
@@ -169,33 +210,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabButtons.forEach(button => {
         button.addEventListener('click', (event) => {
-            const buttonText = event.currentTarget.textContent.trim();
-            let tabNameId = '';
-
-            if (buttonText.includes('Local')) {
-                tabNameId = 'local';
-            } else if (buttonText.includes('API')) {
-                tabNameId = 'api';
-            } else if (buttonText.includes('Enriquecimento')) {
-                tabNameId = 'enriquecimento';
-            } else if (buttonText.includes('Monitoramento')) {
-                tabNameId = 'monitoramento';
-            }
-
+            const tabNameId = event.currentTarget.dataset.tabName;
             if (tabNameId) {
                 openTab(event, tabNameId);
             }
         });
     });
 
-    if (tabButtons.length > 0) {
-        tabButtons[0].click();
-    }
+    // ## CORREÇÃO PRINCIPAL ##
+    // A linha que chamava `tabButtons[0].click()` foi removida daqui.
+    // A seleção da aba inicial agora é feita exclusivamente pela função `setupUIForRole`.
 
     // #################################################################
     // #           LÓGICA DA ABA DE LIMPEZA LOCAL E OUTRAS             #
     // #################################################################
-
+    // (O restante do código de renderer.js permanece o mesmo)
     let rootFile = null;
     let cleanFiles = [];
     let mergeFiles = [];

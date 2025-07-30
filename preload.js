@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  // NOVO: Funções de Login
+  loginAttempt: (username, password) => ipcRenderer.invoke('login-attempt', username, password),
+  
   // Funções de Utilitários
   selectFile: (options) => ipcRenderer.invoke("select-file", options),
   openPath: (path) => ipcRenderer.send("open-path", path),
@@ -46,6 +49,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onEnrichmentFinished: (callback) => ipcRenderer.on("enrichment-finished", (event, ...args) => callback(...args)),
   onUpdateMessage: (callback) => ipcRenderer.on("update-message", (event, ...args) => callback(...args)),
   onRootFeedFinished: (callback) => ipcRenderer.on('root-feed-finished', (event, ...args) => callback(...args)),
+  
+  // NOVO: Listener para receber dados do usuário após o login
+  onUserInfo: (callback) => ipcRenderer.on('user-info', (event, ...args) => callback(...args)),
 
   // Função para remover todos os listeners para evitar memory leaks ao recarregar
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
