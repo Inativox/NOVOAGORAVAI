@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'localGrid': 'local-sections',
         'apiGrid': 'api-sections',
         'enrichmentGrid': 'enrichment-sections',
-        'monitoringGrid': 'monitoring-sections' // Adicionado para a nova aba
+        'monitoringGrid': 'monitoring-sections'
     };
 
     let sortableInstances = {};
@@ -249,31 +249,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetUploadProgress() {
-        uploadProgressContainer.style.display = 'none';
-        uploadProgressBarFill.style.width = '0%';
-        uploadProgressText.textContent = '';
+        if (uploadProgressContainer) uploadProgressContainer.style.display = 'none';
+        if (uploadProgressBarFill) uploadProgressBarFill.style.width = '0%';
+        if (uploadProgressText) uploadProgressText.textContent = '';
     }
 
-    backupCheckbox.addEventListener('change', () => { backupEnabled = backupCheckbox.checked; });
-    autoAdjustPhonesCheckbox.addEventListener('change', () => { autoAdjustPhones = autoAdjustPhonesCheckbox.checked; });
+    if (backupCheckbox) backupCheckbox.addEventListener('change', () => { backupEnabled = backupCheckbox.checked; });
+    if (autoAdjustPhonesCheckbox) autoAdjustPhonesCheckbox.addEventListener('change', () => { autoAdjustPhones = autoAdjustPhonesCheckbox.checked; });
 
-    checkDbCheckbox.addEventListener('change', () => {
+    if (checkDbCheckbox) checkDbCheckbox.addEventListener('change', () => {
         checkDbEnabled = checkDbCheckbox.checked;
         appendLog(`Consulta ao Banco de Dados: ${checkDbEnabled ? 'ATIVADA' : 'DESATIVADA'}`);
     });
 
-    saveToDbCheckbox.addEventListener('change', () => {
+    if (saveToDbCheckbox) saveToDbCheckbox.addEventListener('change', () => {
         saveToDbEnabled = saveToDbCheckbox.checked;
         appendLog(`Salvar no Banco de Dados: ${saveToDbEnabled ? 'ATIVADO' : 'DESATIVADO'}`);
     });
 
-    saveStoredCnpjsBtn.addEventListener('click', async () => {
+    if (saveStoredCnpjsBtn) saveStoredCnpjsBtn.addEventListener('click', async () => {
         appendLog('Solicitando salvamento do histórico de CNPJs em Excel...');
         const result = await window.electronAPI.saveStoredCnpjsToExcel();
         appendLog(result.message);
     });
 
-    deleteBatchBtn.addEventListener('click', async () => {
+    if (deleteBatchBtn) deleteBatchBtn.addEventListener('click', async () => {
         const batchId = batchIdInput.value.trim();
         if (!batchId) {
             appendLog('❌ ERRO: Por favor, insira um ID de Lote para excluir.');
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    consultDbBtn.addEventListener('click', async () => {
+    if (consultDbBtn) consultDbBtn.addEventListener('click', async () => {
         appendLog('Selecionando arquivos para consulta apenas pelo BD...');
         const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para limpar apenas pelo BD', multi: true });
         if (!files || files.length === 0) {
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    selectRootBtn.addEventListener('click', async () => {
+    if (selectRootBtn) selectRootBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione a Lista Raiz', multi: false });
         if (files && files.length > 0) {
             rootFile = files[0];
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    autoRootBtn.addEventListener('click', () => {
+    if (autoRootBtn) autoRootBtn.addEventListener('click', () => {
         if (autoRootBtn.dataset.on) {
             delete autoRootBtn.dataset.on;
             autoRootBtn.textContent = "Auto Raiz: OFF";
@@ -331,12 +331,12 @@ document.addEventListener('DOMContentLoaded', () => {
         appendLog(`Auto Raiz: ${autoRootBtn.dataset.on ? 'ON (usando Banco de Dados)' : 'OFF'}`);
     });
 
-    updateBlocklistBtn.addEventListener('click', async () => {
+    if (updateBlocklistBtn) updateBlocklistBtn.addEventListener('click', async () => {
         const result = await window.electronAPI.updateBlocklist(backupEnabled);
         appendLog(result.success ? result.message : `Erro: ${result.message}`);
     });
 
-    addCleanFileBtn.addEventListener('click', async () => {
+    if (addCleanFileBtn) addCleanFileBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para limpar', multi: true });
         if (!files?.length) return;
         cleanFiles = [];
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    startCleaningBtn.addEventListener('click', () => {
+    if (startCleaningBtn) startCleaningBtn.addEventListener('click', () => {
         const isAutoRoot = autoRootBtn.dataset.on === 'true';
         if (!isAutoRoot && !rootFile) {
             return appendLog('ERRO: Selecione o arquivo raiz ou ative o Auto Raiz.');
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    resetLocalBtn.addEventListener('click', () => {
+    if (resetLocalBtn) resetLocalBtn.addEventListener('click', () => {
         rootFile = null;
         cleanFiles = [];
         mergeFiles = [];
@@ -383,30 +383,32 @@ document.addEventListener('DOMContentLoaded', () => {
         autoAdjustPhones = false;
         checkDbEnabled = false;
         saveToDbEnabled = false;
-        rootFilePathSpan.innerHTML = '';
-        selectedCleanFilesDiv.innerHTML = '';
-        progressContainer.innerHTML = '';
-        logDiv.textContent = '';
-        selectedMergeFilesDiv.innerHTML = '';
-        batchIdInput.value = '';
-        backupCheckbox.checked = false;
-        autoAdjustPhonesCheckbox.checked = false;
-        checkDbCheckbox.checked = false;
-        saveToDbCheckbox.checked = false;
-        delete autoRootBtn.dataset.on;
-        autoRootBtn.textContent = 'Auto Raiz: OFF';
-        selectRootBtn.disabled = false;
+        if (rootFilePathSpan) rootFilePathSpan.innerHTML = '';
+        if (selectedCleanFilesDiv) selectedCleanFilesDiv.innerHTML = '';
+        if (progressContainer) progressContainer.innerHTML = '';
+        if (logDiv) logDiv.textContent = '';
+        if (selectedMergeFilesDiv) selectedMergeFilesDiv.innerHTML = '';
+        if (batchIdInput) batchIdInput.value = '';
+        if (backupCheckbox) backupCheckbox.checked = false;
+        if (autoAdjustPhonesCheckbox) autoAdjustPhonesCheckbox.checked = false;
+        if (checkDbCheckbox) checkDbCheckbox.checked = false;
+        if (saveToDbCheckbox) saveToDbCheckbox.checked = false;
+        if (autoRootBtn) {
+            delete autoRootBtn.dataset.on;
+            autoRootBtn.textContent = 'Auto Raiz: OFF';
+            selectRootBtn.disabled = false;
+        }
         resetUploadProgress();
         appendLog('Módulo de Limpeza Local reiniciado.');
     });
 
-    adjustPhonesBtn.addEventListener('click', async () => {
+    if (adjustPhonesBtn) adjustPhonesBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione arquivo para ajustar fones', multi: false });
         if (!files?.length) return appendLog('Nenhum arquivo selecionado.');
         window.electronAPI.startAdjustPhones({ filePath: files[0], backup: backupEnabled });
     });
 
-    selectMergeFilesBtn.addEventListener('click', async () => {
+    if (selectMergeFilesBtn) selectMergeFilesBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione arquivos para mesclar', multi: true });
         if (!files?.length) return;
         mergeFiles = files;
@@ -416,13 +418,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    startMergeBtn.addEventListener('click', () => {
+    if (startMergeBtn) startMergeBtn.addEventListener('click', () => {
         if (!mergeFiles.length) return appendLog('ERRO: Selecione arquivos para mesclar.');
         appendLog('Iniciando mesclagem...');
         window.electronAPI.startMerge(mergeFiles);
     });
 
-    feedRootBtn.addEventListener('click', async () => {
+    if (feedRootBtn) feedRootBtn.addEventListener('click', async () => {
         appendLog('Selecionando arquivos para alimentar a base Raiz...');
         const files = await window.electronAPI.selectFile({ title: 'Selecione planilhas com CNPJs para a Raiz', multi: true });
         if (!files || files.length === 0) {
@@ -435,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electronAPI.onRootFeedFinished(() => {
-        feedRootBtn.disabled = false;
+        if (feedRootBtn) feedRootBtn.disabled = false;
         appendLog('✅ Processo de alimentação da Raiz finalizado.');
     });
 
@@ -457,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function appendLog(msg) {
+        if (!logDiv) return;
         if (logDiv.textContent === 'Aguardando início do sistema...') {
             logDiv.innerHTML = '';
         }
@@ -476,16 +479,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiProgressBarFill = document.getElementById('apiProgressBarFill');
     const apiLogDiv = document.getElementById('apiLog');
 
-    apiDropzone.addEventListener('dragover', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--accent-color)'; apiDropzone.style.backgroundColor = 'var(--bg-lighter)'; });
-    apiDropzone.addEventListener('dragleave', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; });
-    apiDropzone.addEventListener('drop', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; const files = Array.from(event.dataTransfer.files).filter(file => file.path.endsWith('.xlsx') || file.path.endsWith('.xls') || file.path.endsWith('.csv')).map(file => file.path); if (files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
+    if (apiDropzone) {
+        apiDropzone.addEventListener('dragover', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--accent-color)'; apiDropzone.style.backgroundColor = 'var(--bg-lighter)'; });
+        apiDropzone.addEventListener('dragleave', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; });
+        apiDropzone.addEventListener('drop', (event) => { event.preventDefault(); event.stopPropagation(); apiDropzone.style.borderColor = 'var(--border-color)'; apiDropzone.style.backgroundColor = 'transparent'; const files = Array.from(event.dataTransfer.files).filter(file => file.path.endsWith('.xlsx') || file.path.endsWith('.xls') || file.path.endsWith('.csv')).map(file => file.path); if (files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
+    }
 
-    selectApiFileBtn.addEventListener('click', async () => { const files = await window.electronAPI.selectFile({ title: 'Selecione as planilhas de CNPJs', multi: true }); if (files && files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
-    startApiBtn.addEventListener('click', () => { startApiBtn.disabled = true; resetApiBtn.disabled = true; apiStatusSpan.textContent = 'Iniciando processamento da fila...'; window.electronAPI.startApiQueue({ keyMode: apiKeySelection.value }); });
-    resetApiBtn.addEventListener('click', () => { window.electronAPI.resetApiQueue(); });
+    if (selectApiFileBtn) selectApiFileBtn.addEventListener('click', async () => { const files = await window.electronAPI.selectFile({ title: 'Selecione as planilhas de CNPJs', multi: true }); if (files && files.length > 0) { window.electronAPI.addFilesToApiQueue(files); } });
+    if (startApiBtn) startApiBtn.addEventListener('click', () => { startApiBtn.disabled = true; resetApiBtn.disabled = true; apiStatusSpan.textContent = 'Iniciando processamento da fila...'; window.electronAPI.startApiQueue({ keyMode: apiKeySelection.value }); });
+    if (resetApiBtn) resetApiBtn.addEventListener('click', () => { window.electronAPI.resetApiQueue(); });
 
     function updateApiQueueUI(queue) {
         const { pending, processing, completed } = queue;
+        if (!apiProcessingDiv || !apiPendingDiv || !apiCompletedDiv || !startApiBtn) return;
 
         apiProcessingDiv.innerHTML = processing ? '' : `<span style="color:var(--text-secondary)">Nenhum</span>`;
         if (processing) addFileToUI(apiProcessingDiv, processing, true);
@@ -503,7 +509,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onApiLog((message) => { appendApiLog(message); });
     window.electronAPI.onApiProgress(({ current, total }) => { const percent = Math.round((current / total) * 100); apiProgressBarFill.style.width = `${percent}%`; apiStatusSpan.textContent = `Processando Lote ${current} de ${total}`; });
 
-    function appendApiLog(msg) { apiLogDiv.innerHTML += `> ${msg.replace(/\n/g, '<br>> ')}\n`; apiLogDiv.scrollTop = apiLogDiv.scrollHeight; }
+    function appendApiLog(msg) {
+        if (apiLogDiv) {
+            apiLogDiv.innerHTML += `> ${msg.replace(/\n/g, '<br>> ')}\n`;
+            apiLogDiv.scrollTop = apiLogDiv.scrollHeight;
+        }
+    }
 
     const selectMasterFilesBtn = document.getElementById('selectMasterFilesBtn');
     const selectedMasterFilesDiv = document.getElementById('selectedMasterFiles');
@@ -528,6 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let enrichmentEnrichFiles = [];
 
     function appendEnrichmentLog(msg) {
+        if (!enrichmentLogDiv) return;
         if (enrichmentLogDiv.textContent === 'Aguardando início...') {
             enrichmentLogDiv.innerHTML = '';
         }
@@ -536,6 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateEnrichedCnpjCount() {
+        if (!enrichedCnpjCountSpan) return;
         try {
             enrichedCnpjCountSpan.textContent = 'Carregando...';
             const count = await window.electronAPI.getEnrichedCnpjCount();
@@ -546,11 +559,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    updateEnrichedCnpjCount();
+    if (enrichedCnpjCountSpan) updateEnrichedCnpjCount();
 
-    refreshCountBtn.addEventListener('click', updateEnrichedCnpjCount);
+    if (refreshCountBtn) refreshCountBtn.addEventListener('click', updateEnrichedCnpjCount);
 
-    downloadEnrichedDataBtn.addEventListener('click', async () => {
+    if (downloadEnrichedDataBtn) downloadEnrichedDataBtn.addEventListener('click', async () => {
         downloadEnrichedDataBtn.disabled = true;
         downloadEnrichedDataBtn.textContent = 'Preparando download...';
         try {
@@ -571,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    selectMasterFilesBtn.addEventListener('click', async () => {
+    if (selectMasterFilesBtn) selectMasterFilesBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione as Planilhas Mestras', multi: true });
         if (!files?.length) return;
         enrichmentMasterFiles = files;
@@ -581,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    startLoadToDbBtn.addEventListener('click', () => {
+    if (startLoadToDbBtn) startLoadToDbBtn.addEventListener('click', () => {
         if (enrichmentMasterFiles.length === 0) return appendEnrichmentLog('❌ ERRO: Selecione pelo menos uma planilha mestra.');
         startLoadToDbBtn.disabled = true;
 
@@ -595,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.electronAPI.startDbLoad({ masterFiles: enrichmentMasterFiles });
     });
 
-    selectEnrichFilesBtn.addEventListener('click', async () => {
+    if (selectEnrichFilesBtn) selectEnrichFilesBtn.addEventListener('click', async () => {
         const files = await window.electronAPI.selectFile({ title: 'Selecione Arquivos para Enriquecer', multi: true });
         if (!files?.length) return;
 
@@ -622,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    startEnrichmentBtn.addEventListener('click', () => {
+    if (startEnrichmentBtn) startEnrichmentBtn.addEventListener('click', () => {
         if (enrichmentEnrichFiles.length === 0) return appendEnrichmentLog('❌ ERRO: Selecione pelo menos um arquivo para enriquecer.');
         startEnrichmentBtn.disabled = true;
         const strategy = document.querySelector('input[name="enrichStrategy"]:checked').value;
@@ -654,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electronAPI.onDbLoadFinished(() => {
-        startLoadToDbBtn.disabled = false;
+        if (startLoadToDbBtn) startLoadToDbBtn.disabled = false;
         updateEnrichedCnpjCount();
 
         setTimeout(() => {
@@ -668,12 +681,211 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electronAPI.onEnrichmentFinished(() => {
-        startEnrichmentBtn.disabled = false;
+        if (startEnrichmentBtn) startEnrichmentBtn.disabled = false;
     });
 
     // #################################################################
-    // #           NOVA LÓGICA PARA A ABA DE MONITORAMENTO             #
+    // #           LÓGICA PARA A ABA DE MONITORAMENTO                  #
     // #################################################################
+
+    // --- INÍCIO: DADOS E LÓGICA DO NOVO MODAL DE SELEÇÃO ---
+    const selectionModal = document.getElementById('selection-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalSearchInput = document.getElementById('modal-search-input');
+    const modalListContainer = document.getElementById('modal-list-container');
+    let currentModalContext = null;
+
+    const operadores = [
+        { id: '143', name: 'Adriene Rodrigues' },
+        { id: '58', name: 'Ana Carolina' },
+        { id: '46', name: 'Ana Clara Lopes' },
+        { id: '105', name: 'Ana Maia' },
+        { id: '117', name: 'Ana Rovere' },
+        { id: '40', name: 'Anna Barbosa' }, // Corrigido: estava como id 96
+        { id: '156', name: 'Arthur Medeiros' },
+        { id: '112', name: 'Beatriz Martins' },
+        { id: '92', name: 'Bianca Antunes' },
+        { id: '179', name: 'Brenda Ewald' },
+        { id: '202', name: 'Bruna Lobato' }, // Corrigido
+        { id: '144', name: 'Cairo Motta' },
+        { id: '126', name: 'Camila Nogueira' },
+        { id: '205', name: 'Daiany Porto' }, // Corrigido
+        { id: '115', name: 'Daniel Neves' },
+        { id: '174', name: 'Diana Viana' },
+        { id: '138', name: 'Douglas Reis' }, // Corrigido
+        { id: '77', name: 'Erik Freitas' },  // Corrigido
+        { id: '64', name: 'Felipe Martins' },
+        { id: '150', name: 'Fernanda Novaes' }, // Corrigido
+        { id: '94', name: 'Gabriela Pitzer' },
+        { id: '189', name: 'Giselle Mota' },
+        { id: '108', name: 'Giselly Salles' },
+        { id: '192', name: 'Graça Vitória' },
+        { id: '139', name: 'Guilherme Maudonet' },
+        { id: '104', name: 'Heloisa Bispo' }, // Corrigido
+        { id: '146', name: 'Ian Branco' },
+        { id: '55', name: 'Jennyfer Vieira' },
+        { id: '111', name: 'Jessica Oliveira' },
+        { id: '109', name: 'João Honorato' }, // Corrigido
+        { id: '195', name: 'Joao Soares' },
+        { id: '78', name: 'Joyce Menezes' },
+        { id: '132', name: 'Juliana Oliveira' },
+        { id: '122', name: 'Karolina Silva' },
+        { id: '147', name: 'Kauã Oliveira' },
+        { id: '194', name: 'Kawan Gabriel' },
+        { id: '57', name: 'Larissa Moroni' },
+        { id: '71', name: 'Larissa Oliveira' }, // Corrigido
+        { id: '135', name: 'Lohana Soares' },
+        { id: '68', name: 'Luana Alves' },
+        { id: '136', name: 'Luana Ribeiro' },
+        { id: '178', name: 'Manuela Giraldes' },
+        { id: '126', name: 'Marcos Vinicius' }, // Corrigido
+        { id: '133', name: 'Maria Cristina' },
+        { id: '182', name: 'Maria Luna' },
+        { id: '175', name: 'Maria Martins' },
+        { id: '103', name: 'Mariana Oliveira' },
+        { id: '104', name: 'Maria Seixas' },
+        { id: '171', name: 'Maria Sotelino' },
+        { id: '127', name: 'Matheus Ribeiro' },
+        { id: '180', name: 'Mauricio Freitas' },
+        { id: '173', name: 'Mirella Lira' },
+        { id: '116', name: 'Nicolle Santos' },
+        { id: '129', name: 'Paula Santos' },
+        { id: '61', name: 'Ramon Gonçalves' },
+        { id: '34', name: 'Raphael Machado' },
+        { id: '37', name: 'Renata Souza' },
+        { id: '193', name: 'Ricardo França' }, // Corrigido
+        { id: '30', name: 'Rodrigo Santana' },
+        { id: '128', name: 'Samara Gomes' },
+        { id: '96', name: 'Samella Figueira' },
+        { id: '98', name: 'Sarah Leite' },
+        { id: '157', name: 'Thais Maciel' },
+        { id: '74', name: 'Thays Florencio' }, // Corrigido
+        { id: '93', name: 'Vanessa Barros' },
+        { id: '42', name: 'Vanessa dos Santos' },
+        { id: '177', name: 'Victor Alves' }, // Corrigido
+        { id: '204', name: 'Vitor Faria' },  // Corrigido
+        { id: '149', name: 'Vivian Ferreira' }, // Corrigido
+        { id: '190', name: 'Vivian Simplicio' },
+        { id: '134', name: 'Wanessa Fernandes' }
+    ];
+
+
+    const servicos = [
+        { id: '159', name: '[C6 BANK] - EQUIPE BRUNA', category: 'Abertura' },
+        { id: '235', name: '[C6 BANK] - EQUIPE CAMILA', category: 'Abertura' },
+        { id: '160', name: '[C6 BANK] - EQUIPE LAIANE', category: 'Abertura' },
+        { id: '233', name: '[C6 BANK] - EQUIPE TEF', category: 'Abertura' },
+        { id: '161', name: '[C6 BANK] - EQUIPE WALESKA', category: 'Abertura' },
+        { id: '194', name: '[C6 BANK] -pt2 NOVO TRANSBORDO', category: 'Abertura' },
+        { id: '124', name: '[C6 BANK] - CADÊNCIA GERAL', category: 'Abertura' },
+        { id: '181', name: '[C6/MB] C6 Pay Relacionamento ANTONIO', category: 'Relacionamento' },
+        { id: '232', name: '[C6/MB] C6 Pay Relacionamento JOAO AVILA', category: 'Relacionamento' },
+        { id: '180', name: '[C6/MB] C6 Pay Relacionamento RAPHAELA CALDERON', category: 'Relacionamento' },
+        { id: '168', name: 'Relacionamento Ana Clara', category: 'Relacionamento' },
+        { id: '227', name: 'Relacionamento Anna Barbosa', category: 'Relacionamento' },
+        { id: '154', name: 'Relacionamento Antonio Costa', category: 'Relacionamento' },
+        { id: '169', name: 'Relacionamento Cairo Motta', category: 'Relacionamento' },
+        { id: '203', name: 'Relacionamento Diana Viana', category: 'Relacionamento' },
+        { id: '186', name: 'Relacionamento digite1', category: 'Relacionamento' },
+        { id: '202', name: 'Relacionamento Douglas Reis', category: 'Relacionamento' },
+        { id: '176', name: 'Relacionamento Fernanda Novaes', category: 'Relacionamento' },
+        { id: '171', name: 'Relacionamento Guilherme Maudonet', category: 'Relacionamento' },
+        { id: '155', name: 'Relacionamento Higor Campos', category: 'Relacionamento' },
+        { id: '229', name: 'Relacionamento Jennyfer Vieira', category: 'Relacionamento' },
+        { id: '172', name: 'Relacionamento Jessica Oliveira', category: 'Relacionamento' },
+        { id: '148', name: 'Relacionamento João Avila', category: 'Relacionamento' },
+        { id: '201', name: 'Relacionamento João Honorato', category: 'Relacionamento' },
+        { id: '150', name: 'Relacionamento Juliana Oliveira', category: 'Relacionamento' },
+        { id: '146', name: 'Relacionamento Karolina', category: 'Relacionamento' },
+        { id: '228', name: 'Relacionamento Larissa Oliveira', category: 'Relacionamento' },
+        { id: '158', name: 'Relacionamento Luana Ribeiro', category: 'Relacionamento' },
+        { id: '174', name: 'Relacionamento Marcos Vinicius', category: 'Relacionamento' },
+        { id: '188', name: 'Relacionamento Maria Cristina', category: 'Relacionamento' },
+        { id: '225', name: 'Relacionamento Maria Seixas', category: 'Relacionamento' },
+        { id: '151', name: 'Relacionamento Matheus Ribeiro', category: 'Relacionamento' },
+        { id: '153', name: 'Relacionamento Paula Santos', category: 'Relacionamento' },
+        { id: '193', name: 'Relacionamento Raphaela Calderon', category: 'Relacionamento' },
+        { id: '177', name: 'Relacionamento Raphael Machado', category: 'Relacionamento' },
+        { id: '173', name: 'Relacionamento Renata Souza', category: 'Relacionamento' },
+        { id: '170', name: 'Relacionamento Ricardo França', category: 'Relacionamento' },
+        { id: '226', name: 'Relacionamento Roberto Bianna', category: 'Relacionamento' },
+        { id: '231', name: 'Relacionamento Rodrigo Santana', category: 'Relacionamento' }
+    ];
+
+    const gruposOperador = [
+        { id: '85', name: 'Equipe Bruna' },
+        { id: '120', name: 'Equipe Camila' },
+        { id: '123', name: 'Equipe Laiane' },
+        { id: '133', name: 'Equipe TEF' },
+        { id: '87', name: 'Equipe Waleska' }
+    ];
+
+    function renderModalList(items, searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        const filteredItems = items.filter(item => item.name.toLowerCase().includes(lowerSearchTerm));
+
+        let html = '<ul class="custom-select-list">';
+
+        if (currentModalContext.type === 'servico') {
+            const grouped = filteredItems.reduce((acc, servico) => {
+                (acc[servico.category] = acc[servico.category] || []).push(servico);
+                return acc;
+            }, {});
+            const categoryOrder = ['Abertura', 'Relacionamento'];
+            for (const category of categoryOrder) {
+                if (grouped[category] && grouped[category].length > 0) {
+                    html += `<li class="group-header">${category}</li>`;
+                    html += grouped[category].map(s => `<li data-id="${s.id}" data-name="${s.name}">${s.name}</li>`).join('');
+                }
+            }
+        } else { // Para operadores e grupos de operadores
+            html += filteredItems.map(item => `<li data-id="${item.id}" data-name="${item.name}">${item.name}</li>`).join('');
+        }
+
+        html += '</ul>';
+        modalListContainer.innerHTML = html;
+    }
+
+    function openSelectionModal(context) {
+        currentModalContext = context;
+        modalTitle.textContent = context.title;
+        modalSearchInput.value = '';
+        renderModalList(context.data, '');
+        selectionModal.classList.remove('hidden');
+        modalSearchInput.focus();
+    }
+
+    function closeSelectionModal() {
+        selectionModal.classList.add('hidden');
+        currentModalContext = null;
+    }
+
+    if (selectionModal) {
+        modalCloseBtn.addEventListener('click', closeSelectionModal);
+        selectionModal.addEventListener('click', (e) => {
+            if (e.target === selectionModal) { // Clicou no overlay
+                closeSelectionModal();
+            }
+        });
+
+        modalSearchInput.addEventListener('input', () => {
+            if (currentModalContext) {
+                renderModalList(currentModalContext.data, modalSearchInput.value);
+            }
+        });
+
+        modalListContainer.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target && target.tagName === 'LI' && !target.classList.contains('group-header')) {
+                const { id, name } = target.dataset;
+                currentModalContext.searchEl.value = name;
+                currentModalContext.hiddenInputEl.value = id;
+                closeSelectionModal();
+            }
+        });
+    }
+    // --- FIM: LÓGICA DO NOVO MODAL DE SELEÇÃO ---
 
     const apiParametersContainer = document.getElementById('api-parameters');
     const generateReportBtn = document.getElementById('generateReportBtn');
@@ -703,28 +915,80 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'grupo_operador_id', label: 'ID Grupo Operador' },
     ];
 
-    // Popula a área de parâmetros dinamicamente
-    apiParametersContainer.innerHTML = apiParams.map(param => `
-        <div class="param-item">
-            <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
-            <label for="check-${param.name}">${param.label}</label>
-            <input type="text" id="input-${param.name}" class="hidden" placeholder="Valor para ${param.label}">
-        </div>
-    `).join('');
+    if (apiParametersContainer) {
+        apiParametersContainer.innerHTML = apiParams.map(param => {
+            if (param.name === 'operador_id' || param.name === 'servico_id' || param.name === 'grupo_operador_id') {
+                return `
+                    <div class="param-item">
+                        <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
+                        <label for="check-${param.name}">${param.label}</label>
+                        <div id="${param.name}-select-container" class="custom-select-container hidden">
+                            <input type="text" id="${param.name}-search" readonly placeholder="Clique para selecionar..." style="cursor: pointer;">
+                            <input type="hidden" id="input-${param.name}">
+                        </div>
+                    </div>
+                `;
+            }
 
-    // Adiciona event listeners para os checkboxes dos parâmetros
-    apiParams.forEach(param => {
-        const checkbox = document.getElementById(`check-${param.name}`);
-        const input = document.getElementById(`input-${param.name}`);
-        checkbox.addEventListener('change', () => {
-            input.classList.toggle('hidden', !checkbox.checked);
-            if (!checkbox.checked) {
-                input.value = '';
+            return `
+                <div class="param-item">
+                    <input type="checkbox" id="check-${param.name}" data-param-name="${param.name}">
+                    <label for="check-${param.name}">${param.label}</label>
+                    <input type="text" id="input-${param.name}" class="hidden" placeholder="Valor para ${param.label}">
+                </div>
+            `;
+        }).join('');
+
+        apiParams.forEach(param => {
+            const checkbox = document.getElementById(`check-${param.name}`);
+            if (!checkbox) return;
+
+            if (param.name === 'operador_id' || param.name === 'servico_id' || param.name === 'grupo_operador_id') {
+                const container = document.getElementById(`${param.name}-select-container`);
+                const searchEl = document.getElementById(`${param.name}-search`);
+                const hiddenInputEl = document.getElementById(`input-${param.name}`);
+
+                checkbox.addEventListener('change', () => {
+                    container.classList.toggle('hidden', !checkbox.checked);
+                    if (!checkbox.checked) {
+                        searchEl.value = '';
+                        hiddenInputEl.value = '';
+                    }
+                });
+
+                searchEl.addEventListener('click', () => {
+                    if (!checkbox.checked) return;
+                    let data;
+                    if (param.name === 'operador_id') {
+                        data = operadores;
+                    } else if (param.name === 'servico_id') {
+                        data = servicos;
+                    } else {
+                        data = gruposOperador;
+                    }
+
+                    const context = {
+                        type: param.name.replace('_id', ''),
+                        title: `Selecionar ${param.label}`,
+                        data: data,
+                        searchEl,
+                        hiddenInputEl
+                    };
+                    openSelectionModal(context);
+                });
+
+            } else {
+                const input = document.getElementById(`input-${param.name}`);
+                checkbox.addEventListener('change', () => {
+                    input.classList.toggle('hidden', !checkbox.checked);
+                    if (!checkbox.checked) {
+                        input.value = '';
+                    }
+                });
             }
         });
-    });
+    }
 
-    // Adiciona event listener para a barra de pesquisa de Fone Destino
     if (monitoringSearchInput) {
         const foneDestinoCheckbox = document.getElementById('check-fone_destino');
         const foneDestinoInput = document.getElementById('input-fone_destino');
@@ -735,12 +999,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 foneDestinoInput.value = searchTerm;
             }
             if (foneDestinoCheckbox) {
-                // Ativa o filtro automaticamente quando o usuário digita
                 if (searchTerm) {
                     if (!foneDestinoCheckbox.checked) {
                         foneDestinoCheckbox.checked = true;
-                    }
-                    if (foneDestinoInput.classList.contains('hidden')) {
                         foneDestinoInput.classList.remove('hidden');
                     }
                 }
@@ -748,7 +1009,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Função para formatar data para o formato yyyy-mm-dd (usado pelo input type="date")
     const getHtmlDate = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -756,14 +1016,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${year}-${month}-${day}`;
     }
 
-    // Função para formatar data para o formato dd/mm/yyyy (usado pela API)
     const getApiDate = (dateString) => {
         if (!dateString) return '';
         const [year, month, day] = dateString.split('-');
         return `${day}/${month}/${year}`;
     }
 
-    // Lógica para os botões de filtro de data
     document.querySelectorAll('.date-filter-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const period = e.target.dataset.period;
@@ -782,8 +1040,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'this_week':
                     startDate = new Date(today);
-                    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday...
-                    startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)); // Adjust to Monday
+                    const dayOfWeek = today.getDay();
+                    startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
                     endDate = today;
                     break;
                 case 'last_week':
@@ -798,13 +1056,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
 
-            dataInicioInput.value = getHtmlDate(startDate);
-            dataFimInput.value = getHtmlDate(endDate);
+            if (dataInicioInput) dataInicioInput.value = getHtmlDate(startDate);
+            if (dataFimInput) dataFimInput.value = getHtmlDate(endDate);
         });
     });
 
-    // Lógica principal para gerar o relatório
-    generateReportBtn.addEventListener('click', async () => {
+    if (generateReportBtn) generateReportBtn.addEventListener('click', async () => {
         generateReportBtn.disabled = true;
         monitoringLog.innerHTML = '> 🌀 Gerando relatório... Por favor, aguarde.';
         dashboardSummary.innerHTML = '';
@@ -815,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let params = [];
         apiParams.forEach(param => {
             const checkbox = document.getElementById(`check-${param.name}`);
-            if (checkbox.checked) {
+            if (checkbox && checkbox.checked) {
                 const input = document.getElementById(`input-${param.name}`);
                 params.push(`${param.name}=${encodeURIComponent(input.value)}`);
             } else {
@@ -823,7 +1080,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Adiciona parâmetros de data
         params.push(`data_inicio=${getApiDate(dataInicioInput.value)}`);
         params.push(`data_fim=${getApiDate(dataFimInput.value)}`);
         params.push('formato=json');
@@ -842,7 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
         generateReportBtn.disabled = false;
     });
 
-    // Função para atualizar o dashboard com os dados
     function updateDashboard(data) {
         if (!data || !Array.isArray(data) || data.length === 0) {
             dashboardSummary.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1;">Nenhum dado retornado para os filtros selecionados.</p>';
@@ -850,7 +1105,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // --- Agregação de Dados ---
         const totalCalls = data.length;
         const aggregators = {
             tabulacao: {},
@@ -868,7 +1122,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const value = item[key] || 'Não Preenchido';
                 aggregators[key][value] = (aggregators[key][value] || 0) + 1;
             }
-            // Soma a duração das ligações
             if (item.tempo_ligacao) {
                 const parts = item.tempo_ligacao.split(':');
                 if (parts.length === 3) {
@@ -876,17 +1129,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
-        // --- CÁLCULO DO TMA CORRIGIDO ---
+
         const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
-        const roundedAvgSeconds = Math.round(avgDurationSeconds); // Arredonda o total de segundos primeiro
+        const roundedAvgSeconds = Math.round(avgDurationSeconds);
         const avgMinutes = Math.floor(roundedAvgSeconds / 60);
         const avgSeconds = roundedAvgSeconds % 60;
         const tma = `${String(avgMinutes).padStart(2, '0')}:${String(avgSeconds).padStart(2, '0')}`;
 
-
-        // --- Renderização do Dashboard ---
-        // 1. Cards de Resumo
         dashboardSummary.innerHTML = `
             <div class="summary-card">
                 <div class="summary-card-title">Total de Chamadas</div>
@@ -906,11 +1155,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // 2. Cards de Detalhes
-        dashboardDetails.innerHTML = ''; // Limpa detalhes antigos
+        dashboardDetails.innerHTML = '';
 
         const createDetailCard = (title, dataObject) => {
-            // Ordena os dados por contagem (descendente)
             const sortedData = Object.entries(dataObject).sort(([, a], [, b]) => b - a);
 
             let listItems = sortedData.map(([name, count]) => `
@@ -925,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="detail-card">
                     <h3>${title}</h3>
-                    <ul class="detail-list">${listItems}</ul>
+                    <ul class="detail-list custom-scrollbar">${listItems}</ul>
                 </div>
             `;
         }
