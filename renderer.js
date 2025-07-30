@@ -738,6 +738,8 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: '190', name: 'Vivian Simplicio' }, { id: '134', name: 'Wanessa Fernandes' }
     ];
     const servicos = [
+        { id: '224', name: '[C6 BANK] - ESTEIRA DIGITAL PRINCIPAL', category: 'DIGITAL' }, { id: '209', name: 'ESTEIRA DIGITAL LENTO', category: 'DIGITAL' },
+        { id: '117', name: '[C6 BANK] - RELACIONAMENTO MELISSA', category: 'DIGITAL' }, { id: '34', name: 'LEMBRETE ABERTURA DE CONTA', category: 'DIGITAL' },
         { id: '159', name: '[C6 BANK] - EQUIPE BRUNA', category: 'Abertura' }, { id: '235', name: '[C6 BANK] - EQUIPE CAMILA', category: 'Abertura' },
         { id: '160', name: '[C6 BANK] - EQUIPE LAIANE', category: 'Abertura' }, { id: '233', name: '[C6 BANK] - EQUIPE TEF', category: 'Abertura' },
         { id: '161', name: '[C6 BANK] - EQUIPE WALESKA', category: 'Abertura' }, { id: '194', name: '[C6 BANK] -pt2 NOVO TRANSBORDO', category: 'Abertura' },
@@ -773,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 (acc[servico.category] = acc[servico.category] || []).push(servico);
                 return acc;
             }, {});
-            const categoryOrder = ['Abertura', 'Relacionamento'];
+            const categoryOrder = ['Abertura', 'DIGITAL','Relacionamento'];
             for (const category of categoryOrder) {
                 if (grouped[category] && grouped[category].length > 0) {
                     html += `<li class="group-header">${category}</li>`;
