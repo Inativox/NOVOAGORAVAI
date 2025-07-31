@@ -325,8 +325,8 @@
             gap: 12px;
         }
         .param-item .toggle-label { flex-shrink: 0;}
-        .param-item input[type="text"], .param-item .custom-select-container { flex-grow: 1; }
-        .param-item input[type="text"].hidden, .param-item .custom-select-container.hidden { display: none; }
+        .param-item input[type="text"], .param-item .custom-select-container, .param-item .radio-group-container, .param-item .multi-select-container { flex-grow: 1; }
+        .param-item input[type="text"].hidden, .param-item .custom-select-container.hidden, .param-item .radio-group-container.hidden, .param-item .multi-select-container.hidden { display: none; }
 
         .monitoring-dashboard {
             display: grid;
@@ -562,6 +562,23 @@
             grid-template-columns: 1fr 1fr;
             gap: 24px;
         }
+        
+        /* --- NOVO: ESTILOS PARA FILTROS MODIFICADOS E MODAL MULTI-SELEÇÃO --- */
+        .radio-group-container { display: flex; align-items: center; gap: 15px; flex-grow: 1; }
+        .radio-group-container label { display: flex; align-items: center; cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+        .radio-group-container input[type="radio"] { display: none; }
+        .radio-group-container input[type="radio"] + .radio-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-light); background: var(--bg-dark); margin-right: 8px; position: relative; transition: all 0.2s; }
+        .radio-group-container input[type="radio"] + .radio-circle::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-color); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); transition: transform 0.2s; }
+        .radio-group-container input[type="radio"]:checked + .radio-circle { border-color: var(--accent-color); }
+        .radio-group-container input[type="radio"]:checked + .radio-circle::after { transform: translate(-50%, -50%) scale(1); }
+        .multi-select-container { flex-grow: 1; }
+        .multi-select-button { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); text-align: left; justify-content: space-between; width: 100%; }
+        .multi-select-button:hover { background: var(--bg-lighter); }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; background-color: var(--bg-dark); }
+        .modal-list-multi li { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; border-radius: 6px; }
+        .modal-list-multi li:hover { background: var(--bg-card); }
+        .modal-list-multi input[type="checkbox"] { margin-right: 15px; width: 18px; height: 18px; accent-color: var(--accent-color); }
+        .modal-list-multi label { width: 100%; cursor: pointer; }
 
         @media (max-width: 1200px) { 
             .grid, .two-column-tools { 
@@ -923,6 +940,24 @@
         </div>
     </div>
 
+    <div id="multi-selection-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 700px; height: 85%; max-height: 750px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="multi-modal-title">Selecionar Tabulações</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-search-container">
+                <input type="text" id="multi-modal-search-input" placeholder="Pesquisar tabulações...">
+            </div>
+            <div id="multi-modal-list-container" class="modal-body custom-scrollbar">
+                </div>
+            <div class="modal-footer">
+                <button id="multi-modal-cancel-btn" class="btn-danger">Cancelar</button>
+                <button id="multi-modal-confirm-btn">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+
     <div id="suspicious-calls-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -930,7 +965,7 @@
                 <button class="modal-close-btn">&times;</button>
             </div>
             <div id="suspicious-calls-list" class="modal-body custom-scrollbar">
-                </div>
+            </div>
         </div>
     </div>
 
