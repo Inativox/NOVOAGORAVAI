@@ -211,6 +211,39 @@
             opacity: 0.7;
         }
 
+        /* --- NOVO: Estilos para "Manter Logado" --- */
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .remember-me input {
+            margin-right: 8px;
+            accent-color: var(--accent-primary);
+        }
+        
+        #logout-link {
+            font-size: 0.875rem;
+            color: var(--accent-primary);
+            text-decoration: none;
+            cursor: pointer;
+            display: none; /* Oculto por padrão */
+        }
+
+        #logout-link:hover {
+            text-decoration: underline;
+        }
+
         /* Button */
         .login-button {
             width: 100%;
@@ -333,12 +366,10 @@
     </style>
 </head>
 <body>
-    <!-- Animated Background -->
     <div class="bg-animation">
         <div class="grid-overlay"></div>
     </div>
 
-    <!-- Login Container -->
     <div class="login-container">
         <div class="login-header">
             <h1 class="login-title">Acesso Seguro</h1>
@@ -369,6 +400,15 @@
                     autocomplete="current-password"
                 >
             </div>
+            
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember-me">
+                    Manter-me logado
+                </label>
+                <a id="logout-link">Fazer logout?</a>
+            </div>
+
 
             <button type="submit" id="login-btn" class="login-button">
                 <span class="spinner" id="spinner"></span>
@@ -403,10 +443,12 @@
         const loginForm = document.getElementById('login-form');
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
+        const rememberMeCheckbox = document.getElementById('remember-me');
         const loginBtn = document.getElementById('login-btn');
         const spinner = document.getElementById('spinner');
         const buttonText = document.getElementById('button-text');
         const messageDiv = document.getElementById('message');
+        const logoutLink = document.getElementById('logout-link');
 
         // Função de login
         async function attemptLogin(event) {
@@ -414,6 +456,7 @@
             
             const username = usernameInput.value.trim();
             const password = passwordInput.value.trim();
+            const rememberMe = rememberMeCheckbox.checked;
             
             // Limpar mensagens anteriores
             messageDiv.textContent = '';
@@ -434,7 +477,7 @@
 
                 // Verificar se existe a API do Electron
                 if (window.electronAPI && window.electronAPI.loginAttempt) {
-                    const result = await window.electronAPI.loginAttempt(username, password);
+                    const result = await window.electronAPI.loginAttempt(username, password, rememberMe);
                     
                     if (result.success) {
                         showMessage('Login realizado com sucesso!', 'success');
@@ -498,6 +541,22 @@
                 }
             });
         });
+        
+        // NOVO: Listener para o link de logout
+        logoutLink.addEventListener('click', () => {
+            if (window.electronAPI && window.electronAPI.logout) {
+                window.electronAPI.logout();
+            }
+        });
+
+        // NOVO: Listener para receber falha de login automático
+        if (window.electronAPI && window.electronAPI.onAutoLoginFailed) {
+            window.electronAPI.onAutoLoginFailed((message) => {
+                showMessage(message, 'error');
+                logoutLink.style.display = 'inline'; // Mostra o link para limpar credenciais
+            });
+        }
+
 
         // Animação de entrada
         document.addEventListener('DOMContentLoaded', function() {
@@ -510,4 +569,3 @@
     </script>
 </body>
 </html>
-

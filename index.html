@@ -580,6 +580,38 @@
         .modal-list-multi input[type="checkbox"] { margin-right: 15px; width: 18px; height: 18px; accent-color: var(--accent-color); }
         .modal-list-multi label { width: 100%; cursor: pointer; }
 
+        /* --- NOVO: ESTILOS PARA A TABELA DE TEMPOS DO OPERADOR --- */
+        #operator-times-container {
+            grid-column: 1 / -1; /* Ocupa a largura total */
+        }
+        .operator-times-table-wrapper {
+            width: 100%;
+            overflow-x: auto; /* Permite rolagem horizontal se necessário */
+        }
+        .operator-times-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            white-space: nowrap; /* Impede que o texto quebre */
+        }
+        .operator-times-table th, 
+        .operator-times-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .operator-times-table th {
+            background-color: var(--bg-lighter);
+            font-weight: 600;
+            color: var(--accent-light);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .operator-times-table tbody tr:hover {
+            background-color: var(--bg-card);
+        }
+
         @media (max-width: 1200px) { 
             .grid, .two-column-tools { 
                 grid-template-columns: 1fr; 
@@ -918,6 +950,11 @@
                      </div>
                 <div id="dashboard-details" class="section">
                      </div>
+                <div id="operator-times-container" class="section full-width" style="display: none;">
+                    <h3>Tempos dos Operadores</h3>
+                    <div id="operator-times-table-wrapper" class="operator-times-table-wrapper custom-scrollbar">
+                        </div>
+                </div>
                 <div id="monitoring-log" class="logs custom-scrollbar section">
                     OBSERVAÇÃO: SE FOR BUSCAR DESEMPENHO DE CAMPANHA, QUANTO MENOS FILTRO, MAIS DEMORADO!! APLIQUE FILTROS PARA SER RÁPIDO...
                 </div>
@@ -972,7 +1009,11 @@
 
     <script src="renderer.js"></script>
     <footer>
-        <p>Usuário: <span id="currentUser" style="font-weight: bold;"></span> | Criador: Davi Abraão | Versão: 2.2</p>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+            <p>Usuário: <span id="currentUser" style="font-weight: bold;"></span></p>
+            <button id="logoutBtn" class="btn-danger" style="padding: 4px 10px; font-size: 12px; display: none;">Sair</button>
+        </div>
+        <p>Criador: Davi Abraão | Versão: 2.3</p>
         <div id="update-message"></div>
     </footer>
 </body>

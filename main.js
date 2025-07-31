@@ -1,3 +1,4 @@
+console.log('--- MAIN.JS CARREGADO - VERSÃO NOVA ---');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -7,6 +8,7 @@ const XLSX = require("xlsx");
 const ExcelJS = require("exceljs");
 const axios = require("axios");
 const os = require('os');
+const Store = require('electron-store'); // NOVO: Para salvar dados
 
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -14,14 +16,14 @@ const { getFirestore } = require("firebase-admin/firestore");
 autoUpdater.logger = require("electron-log");
 autoUpdater.logger.transports.file.level = "info";
 
+// NOVO: Inicializa o electron-store
+const store = new Store();
+
 // #################################################################
-// #           NOVO: SISTEMA DE LOGIN E PERMISSÕES                 #
+// #           SISTEMA DE LOGIN E PERMISSÕES                 #
 // #################################################################
 
-// Armazena as credenciais e papéis dos usuários.
-// Em uma aplicação real, isso deveria ser mais seguro (Pablo: banco de dadosVasco@2025senhas com hash).
 const users = {
-
     'Pablo': { password: 'Vasco@2025', role: 'admin' },
     'Felipe': { password: 'Flamengo@2025', role: 'admin' },
     'Davi': { password: '080472Fr*', role: 'admin' },
@@ -35,20 +37,20 @@ const users = {
 
 let mainWindow;
 let loginWindow;
-let currentUser = null; // Armazena o usuário logado
+let currentUser = null; 
 
-// Função para criar a janela de login
 function createLoginWindow() {
     loginWindow = new BrowserWindow({
         width: 420,
-        height: 500,
+        height: 550, // Aumentado para o novo campo
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
         },
         resizable: false,
-        frame: false, // Opcional: para uma janela sem bordas
+        frame: false,
+        center: true,
     });
 
     loginWindow.loadFile('login.html');
@@ -56,24 +58,45 @@ function createLoginWindow() {
     loginWindow.on('closed', () => {
         loginWindow = null;
     });
+    return loginWindow;
 }
 
-// NOVO: Handler para a tentativa de login
-ipcMain.handle('login-attempt', async (event, username, password) => {
+// ATUALIZADO: Handler para a tentativa de login manual
+ipcMain.handle('login-attempt', async (event, username, password, rememberMe) => {
     const user = users[username];
     if (user && user.password === password) {
         currentUser = { username: username, role: user.role };
         
-        createMainWindow(); // Cria a janela principal após o login
-        loginWindow.close(); // Fecha a janela de login
+        if (rememberMe) {
+            // Salva as credenciais se "Manter logado" estiver marcado
+            store.set('credentials', { username, password });
+        } else {
+            // Garante que credenciais antigas sejam limpas se não marcar
+            store.delete('credentials');
+        }
+        
+        createMainWindow(); 
+        if (loginWindow) loginWindow.close();
 
         return { success: true };
     } else {
+        store.delete('credentials'); // Limpa em caso de falha
         return { success: false, message: 'Usuário ou senha inválidos.' };
     }
 });
 
-// Função de verificação de permissão
+// NOVO: Handler para o logout
+ipcMain.on('logout', () => {
+    store.delete('credentials'); // Limpa as credenciais salvas
+    currentUser = null;
+    if (mainWindow) {
+        mainWindow.close();
+    }
+    if (!loginWindow) {
+        createLoginWindow();
+    }
+});
+
 const isAdmin = () => {
     return currentUser && currentUser.role === 'admin';
 };
@@ -116,7 +139,7 @@ ipcMain.on('open-path', (event, filePath) => {
 });
 
 async function runPhoneAdjustment(filePath, event, backup) {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         return;
     }
@@ -125,15 +148,11 @@ async function runPhoneAdjustment(filePath, event, backup) {
         log(`❌ Erro: Arquivo para ajuste de fones não encontrado em: ${filePath}`);
         return;
     }
-    log(`\n--- Iniciando Ajuste de Fones para: ${path.basename(filePath)
-        } ---`);
+    log(`\n--- Iniciando Ajuste de Fones para: ${path.basename(filePath)} ---`);
     try {
         if (backup) {
             const p = path.parse(filePath);
-            const backupPath = path.join(p.dir, `${p.name
-                }.backup_fones_${Date.now()
-                }${p.ext
-                }`);
+            const backupPath = path.join(p.dir, `${p.name}.backup_fones_${Date.now()}${p.ext}`);
             fs.copyFileSync(filePath, backupPath);
             log(`Backup do arquivo criado em: ${backupPath}`);
         }
@@ -153,8 +172,7 @@ async function runPhoneAdjustment(filePath, event, backup) {
             log("⚠️ Nenhuma coluna \"fone\" encontrada. Ajuste pulado.");
             return;
         }
-        log(`Ajustando ${phoneColumns.length
-            } colunas de telefone...`);
+        log(`Ajustando ${phoneColumns.length} colunas de telefone...`);
         let processedRows = 0;
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1)
@@ -169,8 +187,7 @@ async function runPhoneAdjustment(filePath, event, backup) {
         await workbook.xlsx.writeFile(filePath);
         log(`✅ Ajuste de fones concluído. ${processedRows} linhas processadas.`);
     } catch (err) {
-        log(`❌ Erro catastrófico durante o ajuste de fones: ${err.message
-            }`);
+        log(`❌ Erro catastrófico durante o ajuste de fones: ${err.message}`);
         console.error(err);
     }
 }
@@ -192,30 +209,26 @@ const rootCollection = db.collection("Raiz");
 let storedCnpjs = new Set();
 
 async function loadStoredCnpjs() {
-    if (!isAdmin()) return; // Verificação de permissão
+    if (!isAdmin()) return; 
     try {
         const snapshot = await cnpjsCollection.get();
         storedCnpjs = new Set(snapshot.docs.map(doc => doc.id));
-        console.log(`${storedCnpjs.size
-            } CNPJs carregados do Firestore.`);
+        console.log(`${storedCnpjs.size} CNPJs carregados do Firestore.`);
         if (mainWindow) {
-            mainWindow.webContents.send("log", `✅ Sincronização com o BD concluída. ${storedCnpjs.size
-                } CNPJs carregados.`);
+            mainWindow.webContents.send("log", `✅ Sincronização com o BD concluída. ${storedCnpjs.size} CNPJs carregados.`);
         }
     } catch (err) {
         console.error("Falha ao carregar CNPJs do Firestore:", err);
         if (mainWindow) {
-            mainWindow.webContents.send("log", `❌ ERRO ao carregar histórico do Firebase: ${err.message
-                }`);
+            mainWindow.webContents.send("log", `❌ ERRO ao carregar histórico do Firebase: ${err.message}`);
         }
     }
 }
 
-// MODIFICADO: Agora cria a janela principal
 function createMainWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 900,
+        width: 1400, // Aumentado para o novo layout
+        height: 950,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -224,12 +237,11 @@ function createMainWindow() {
     });
     mainWindow.loadFile("index.html");
     
-    // MODIFICADO: Envia dados do usuário para a janela principal
     mainWindow.webContents.on("did-finish-load", () => {
         if (currentUser) {
             mainWindow.webContents.send('user-info', currentUser);
         }
-        if (isAdmin()) { // Apenas admin pode carregar dados do DB
+        if (isAdmin()) { 
             loadStoredCnpjs();
         }
         autoUpdater.checkForUpdatesAndNotify();
@@ -237,72 +249,42 @@ function createMainWindow() {
 
     mainWindow.on('closed', () => {
         mainWindow = null;
-        if (process.platform !== 'darwin') {
-            app.quit();
-        }
+        // Não encerra o app aqui para permitir o fluxo de logout
     });
 }
 
-ipcMain.on("prepare-enrichment-files", async (event, filePaths) => {
-    if (!isAdmin()) return; // Verificação de permissão
-    const log = (msg) => event.sender.send("enrichment-log", msg);
-    for (const filePath of filePaths) {
-        log(`Preparando arquivo: ${path.basename(filePath)
-            }...`);
-        try {
-            const workbook = new ExcelJS.Workbook();
-            await workbook.xlsx.readFile(filePath);
-            const worksheet = workbook.worksheets[0];
-            if (!worksheet) {
-                log(`⚠️ Planilha não encontrada em ${path.basename(filePath)
-                    }. Pulando.`);
-                continue;
-            }
-            const existingHeaders = new Set();
-            worksheet.getRow(1).eachCell({
-                includeEmpty: true
-            }, (cell) => {
-                if (cell.value)
-                    existingHeaders.add(String(cell.value).trim().toLowerCase());
+// ATUALIZADO: Lógica de inicialização do app
+app.whenReady().then(async () => {
+    const savedCredentials = store.get('credentials');
 
+    if (savedCredentials && savedCredentials.username && savedCredentials.password) {
+        const { username, password } = savedCredentials;
+        const user = users[username];
+
+        if (user && user.password === password) {
+            // Login automático bem-sucedido
+            currentUser = { username, role: user.role };
+            createMainWindow();
+        } else {
+            // Credenciais salvas são inválidas
+            const win = createLoginWindow();
+            win.webContents.on('did-finish-load', () => {
+                win.webContents.send('auto-login-failed', 'Credenciais salvas inválidas. Faça o login novamente.');
             });
-            let addedHeaders = false;
-            let nextAvailableColumn = worksheet.columnCount + 1;
-            for (let i = 1; i <= 14; i++) {
-                const headerName = `fone${i}`;
-                if (!existingHeaders.has(headerName)) {
-                    worksheet.getCell(1, nextAvailableColumn).value = headerName;
-                    nextAvailableColumn++;
-                    addedHeaders = true;
-                }
-            }
-            if (addedHeaders) {
-                await workbook.xlsx.writeFile(filePath);
-                log(`✅ Cabeçalhos de fone adicionados para: ${path.basename(filePath)
-                    }`);
-            } else {
-                log(`Todos os cabeçalhos necessários já existem em: ${path.basename(filePath)
-                    }`);
-            }
-        } catch (err) {
-            log(`❌ Erro ao preparar ${path.basename(filePath)
-                }: ${err.message
-                }`);
         }
+    } else {
+        // Nenhuma credencial salva, mostra a tela de login
+        createLoginWindow();
     }
 });
 
-// MODIFICADO: Inicia com a janela de login
-app.whenReady().then(createLoginWindow);
 
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
-        currentUser = null; // Limpa o usuário ao fechar
         app.quit();
     }
 });
 
-// Verificação de permissão adicionada
 ipcMain.handle("select-file", async (event, {
     title,
     multi
@@ -344,20 +326,17 @@ async function readSpreadsheet(filePath) {
         }
     } catch (e) {
         console.error(`Erro ao ler planilha: ${filePath}`, e);
-        throw new Error(`Não foi possível ler o arquivo ${path.basename(filePath)
-            }. Verifique se o caminho está correto e se você tem permissão.`);
+        throw new Error(`Não foi possível ler o arquivo ${path.basename(filePath)}. Verifique se o caminho está correto e se você tem permissão.`);
     }
 }
 function writeSpreadsheet(workbook, filePath) {
     XLSX.writeFile(workbook, filePath);
 }
 
-// Verificação de permissão adicionada
 ipcMain.handle("get-enriched-cnpj-count", async () => {
     if (!isAdmin()) return 0;
     return (await enrichmentCollection.get()).size
 });
-// Verificação de permissão adicionada
 ipcMain.handle("download-enriched-data", async () => {
     if (!isAdmin()) {
         return { success: false, message: "Acesso negado: Permissão de administrador necessária." };
@@ -365,8 +344,7 @@ ipcMain.handle("download-enriched-data", async () => {
     try {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: "Salvar Dados Enriquecidos",
-            defaultPath: `dados_enriquecidos_${Date.now()
-                }.xlsx`,
+            defaultPath: `dados_enriquecidos_${Date.now()}.xlsx`,
             filters: [
                 {
                     name: "Excel Files",
@@ -385,8 +363,7 @@ ipcMain.handle("download-enriched-data", async () => {
             "cpf",
             ...Array.from({
                 length: 14
-            }, (_, i) => `fone${i + 1
-                }`)
+            }, (_, i) => `fone${i + 1}`)
         ];
         const data = snapshot.docs.map(doc => {
             const phones = doc.data().telefones || [];
@@ -407,12 +384,10 @@ ipcMain.handle("download-enriched-data", async () => {
     } catch (error) {
         return {
             success: false,
-            message: `Erro ao gerar arquivo: ${error.message
-                }`
+            message: `Erro ao gerar arquivo: ${error.message}`
         };
     }
 });
-// Verificação de permissão adicionada
 ipcMain.on("start-db-load", async (event, { masterFiles }) => {
     if (!isAdmin()) {
         event.sender.send("enrichment-log", "❌ Acesso negado: Permissão de administrador necessária.");
@@ -504,13 +479,11 @@ ipcMain.on("start-db-load", async (event, { masterFiles }) => {
                     await saveChunkToFirestore(cnpjsToUpdate, filePath);
 
             } catch (err) {
-                log(`❌ ERRO ao processar ${fileName}: ${err.message
-                    }`);
+                log(`❌ ERRO ao processar ${fileName}: ${err.message}`);
             }
         }
     } catch (err) {
-        log(`❌ Um erro crítico ocorreu: ${err.message
-            }`);
+        log(`❌ Um erro crítico ocorreu: ${err.message}`);
     } finally {
         log(`\n✅ Carga finalizada. Total de ${totalCnpjsProcessed} CNPJs únicos processados.`);
         event.sender.send("db-load-finished");
@@ -523,9 +496,7 @@ function formatEta(totalSeconds) {
 
     const m = Math.floor(totalSeconds / 60);
     const s = Math.floor(totalSeconds % 60);
-    return `${String(m).padStart(2, '0')
-        }:${String(s).padStart(2, '0')
-        }`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 async function runEnrichmentProcess({
@@ -533,7 +504,7 @@ async function runEnrichmentProcess({
     strategy,
     backup
 }, log, progress, onFinish) {
-    if (!isAdmin()){ // Verificação de permissão
+    if (!isAdmin()){ 
         log("❌ Acesso negado: Permissão de administrador necessária.");
         if(onFinish) onFinish();
         return;
@@ -546,15 +517,11 @@ async function runEnrichmentProcess({
         for (const fileObj of filesToEnrich) {
             const { path: filePath, id } = fileObj;
             const startTime = Date.now();
-            log(`\nProcessando arquivo: ${path.basename(filePath)
-                }`);
+            log(`\nProcessando arquivo: ${path.basename(filePath)}`);
             progress(id, 0, null);
             if (backup) {
                 const p = path.parse(filePath);
-                fs.copyFileSync(filePath, path.join(p.dir, `${p.name
-                    }.backup_enrich_${Date.now()
-                    }${p.ext
-                    }`));
+                fs.copyFileSync(filePath, path.join(p.dir, `${p.name}.backup_enrich_${Date.now()}${p.ext}`));
                 log(`Backup criado.`);
             }
             try {
@@ -604,8 +571,7 @@ async function runEnrichmentProcess({
                         continue;
 
 
-                    log(`Lote ${currentBatchNum}/${totalBatches}: Processando ${cnpjsInBatch.size
-                        } CNPJs...`);
+                    log(`Lote ${currentBatchNum}/${totalBatches}: Processando ${cnpjsInBatch.size} CNPJs...`);
 
                     const enrichmentDataForBatch = new Map();
                     const cnpjKeys = Array.from(cnpjsInBatch.keys());
@@ -618,8 +584,7 @@ async function runEnrichmentProcess({
                         snapshot.forEach(doc => enrichmentDataForBatch.set(doc.id, doc.data().telefones || []));
                     }
 
-                    log(`Lote ${currentBatchNum}/${totalBatches}: ${enrichmentDataForBatch.size
-                        } CNPJs encontrados no BD. Atualizando planilha...`);
+                    log(`Lote ${currentBatchNum}/${totalBatches}: ${enrichmentDataForBatch.size} CNPJs encontrados no BD. Atualizando planilha...`);
 
                     for (const [cnpj, { row }] of cnpjsInBatch.entries()) {
                         let rowWasEnriched = false;
@@ -658,15 +623,12 @@ async function runEnrichmentProcess({
                 }
                 await workbook.xlsx.writeFile(filePath);
                 progress(id, 100, "00:00");
-                log(`✅ Arquivo ${path.basename(filePath)
-                    } concluído! Total de enriquecidos: ${enrichedInFile}. Não encontrados: ${notFoundInFile}.`);
+                log(`✅ Arquivo ${path.basename(filePath)} concluído! Total de enriquecidos: ${enrichedInFile}. Não encontrados: ${notFoundInFile}.`);
                 totalEnrichedRowsOverall += enrichedInFile;
                 totalNotFoundInDbOverall += notFoundInFile;
                 totalProcessedRowsOverall += totalRows;
             } catch (err) {
-                log(`❌ ERRO catastrófico em ${path.basename(filePath)
-                    }: ${err.message
-                    }`);
+                log(`❌ ERRO catastrófico em ${path.basename(filePath)}: ${err.message}`);
             }
         }
     } finally {
@@ -679,7 +641,7 @@ async function runEnrichmentProcess({
 }
 
 ipcMain.on("start-enrichment", async (event, options) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
          event.sender.send("enrichment-log", "❌ Acesso negado: Permissão de administrador necessária.");
          event.sender.send("enrichment-finished");
          return;
@@ -693,56 +655,77 @@ ipcMain.on("start-enrichment", async (event, options) => {
 
 
 // #################################################################
-// #           NOVO HANDLER PARA A ABA DE MONITORAMENTO            #
+// #           HANDLER ÚNICO PARA A ABA DE MONITORAMENTO           #
 // #################################################################
-// ESTA FUNÇÃO É PÚBLICA (acessível a todos os usuários logados)
-ipcMain.handle('fetch-monitoring-report', async (event, url) => {
-    if (!currentUser) { // Precisa estar logado
-         return { success: false, message: 'Acesso negado. Faça o login.' };
+
+ipcMain.handle('fetch-monitoring-report', async (event, { reportUrl, operatorTimesParams }) => {
+    if (!currentUser) {
+        return { success: false, message: 'Acesso negado. Faça o login.' };
     }
-    console.log(`Buscando relatório do endpoint: ${url}`);
+
+    // --- ETAPA 1: Buscar o relatório principal de chamadas ---
+    console.log(`Buscando relatório principal: ${reportUrl}`);
+    let mainReportResult;
     try {
-        const response = await axios.get(url, {
-            timeout: 4000000, 
-            headers: {
-                'User-Agent': 'PostmanRuntime/7.44.1'
-            }
+        const response = await axios.get(reportUrl, {
+            timeout: 4000000,
+            headers: { 'User-Agent': 'PostmanRuntime/7.44.1' }
         });
+
         if (response.status === 200) {
-            if (typeof response.data === 'string' && response.data.includes("Nenhum registro encontrado")) {
-                return {
-                    success: true,
-                    data: []
-                }; 
-            }
-            return {
-                success: true,
-                data: response.data
-            };
+            const data = (typeof response.data === 'string' && response.data.includes("Nenhum registro encontrado"))
+                ? []
+                : response.data;
+            mainReportResult = { success: true, data: data, operatorTimesData: null };
         } else {
-            return {
-                success: false,
-                message: `A API retornou um status inesperado: ${response.status
-                    }`
-            };
+            return { success: false, message: `A API principal retornou um status inesperado: ${response.status}` };
         }
     } catch (error) {
-        console.error("Erro ao buscar relatório de monitoramento:", error);
-        return {
-            success: false,
-            message: `Falha na comunicação com a API: ${error.message
-                }`
-        };
+        console.error("Erro ao buscar relatório de monitoramento:", error.message);
+        return { success: false, message: `Falha na comunicação com a API principal: ${error.message}` };
     }
-});
 
+
+    // --- ETAPA 2: Se a primeira busca deu certo E existem filtros de operador/equipe, buscar os tempos ---
+    if (mainReportResult.success && operatorTimesParams) {
+        console.log('[DEBUG MAIN] 1. Parâmetros recebidos para buscar tempos:', operatorTimesParams);
+        const { data_inicio, data_fim, operador_id, grupo_operador_id } = operatorTimesParams;
+        const baseUrl = 'http://mbfinance.fastssl.com.br/api/relatorio/operador_tempos.php';
+        const url = `${baseUrl}?data_inicial=${data_inicio}&data_final=${data_fim}&operador_id=${operador_id}&grupo_operador_id=${grupo_operador_id}&servico_id=&operador_ativo=`;
+
+        console.log(`[DEBUG MAIN] 2. Montando e requisitando a URL de tempos: ${url}`);
+
+        try {
+            const timesResponse = await axios.get(url, { timeout: 30000 });
+            console.log('[DEBUG MAIN] 3. API de tempos respondeu com sucesso!');
+            if (timesResponse.status === 200) {
+                // Anexa os dados de tempos ao resultado principal
+                mainReportResult.operatorTimesData = timesResponse.data;
+            } else {
+                 console.error(`[DEBUG MAIN] API de tempos retornou status ${timesResponse.status}`);
+            }
+        } catch (error) {
+            // Um erro aqui não deve parar o processo, apenas logamos e continuamos
+            console.error('[DEBUG MAIN] 4. !!! ERRO na chamada da API de tempos !!!');
+            if (error.response) {
+                console.error('   -> ERRO DE RESPOSTA:', error.response.data);
+                console.error('   -> STATUS DO ERRO:', error.response.status);
+            } else {
+                console.error('   -> ERRO GERAL:', error.message);
+            }
+        }
+    }
+
+    // --- ETAPA 3: Retornar o resultado final (com ou sem os dados de tempos) ---
+    return mainReportResult;
+});
 
 // #################################################################
 // #           FUNÇÃO PARA ALIMENTAR A BASE RAIZ                   #
 // #################################################################
 
 ipcMain.on("feed-root-database", async (event, filePaths) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         event.sender.send("root-feed-finished");
         return;
@@ -772,8 +755,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
         if (cnpjChunk.size === 0)
             return;
 
-        log(`Verificando ${cnpjChunk.size
-            } CNPJs únicos contra o BD...`);
+        log(`Verificando ${cnpjChunk.size} CNPJs únicos contra o BD...`);
 
         const cnpjsToCheck = Array.from(cnpjChunk);
         const trulyNewCnpjs = new Set();
@@ -789,8 +771,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
                 const snapshot = await rootCollection.where('__name__', 'in', queryChunk).get();
                 snapshot.forEach(doc => existingCnpjs.add(doc.id));
             } catch (e) {
-                log(`❌ Erro ao verificar existência de CNPJs: ${e.message
-                    }`);
+                log(`❌ Erro ao verificar existência de CNPJs: ${e.message}`);
                 continue;
             }
 
@@ -813,8 +794,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
         for (let i = 0; i < cnpjsToWrite.length; i += FIRESTORE_WRITE_LIMIT) {
             const writeChunk = cnpjsToWrite.slice(i, i + FIRESTORE_WRITE_LIMIT);
             const batch = db.batch();
-            const batchId = `raiz-feed-${Date.now()
-                }`;
+            const batchId = `raiz-feed-${Date.now()}`;
 
             writeChunk.forEach(cnpj => {
                 const docRef = rootCollection.doc(cnpj);
@@ -827,12 +807,10 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
 
             try {
                 await batch.commit();
-                log(`✅ Lote de ${writeChunk.length
-                    } CNPJs salvo na coleção Raiz com sucesso.`);
+                log(`✅ Lote de ${writeChunk.length} CNPJs salvo na coleção Raiz com sucesso.`);
                 totalNewCnpjsAdded += writeChunk.length;
             } catch (e) {
-                log(`❌ Erro ao salvar lote na coleção Raiz: ${e.message
-                    }`);
+                log(`❌ Erro ao salvar lote na coleção Raiz: ${e.message}`);
             }
         }
     };
@@ -886,8 +864,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
             }
 
             if (cnpjsFromFile.size > 0) {
-                log(`\n--- Processando Lote Final (${cnpjsFromFile.size
-                    } registros) ---`);
+                log(`\n--- Processando Lote Final (${cnpjsFromFile.size} registros) ---`);
                 await processChunk(cnpjsFromFile, fileName);
                 cnpjsFromFile.clear();
             }
@@ -895,8 +872,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
             log(`\n✅ Finalizado o processamento do arquivo ${fileName}.`);
 
         } catch (err) {
-            log(`❌ Erro catastrófico ao processar o arquivo ${fileName}: ${err.message
-                }`);
+            log(`❌ Erro catastrófico ao processar o arquivo ${fileName}: ${err.message}`);
             console.error(err);
         }
     }
@@ -912,7 +888,7 @@ ipcMain.on("feed-root-database", async (event, filePaths) => {
 // #################################################################
 
 ipcMain.handle("save-stored-cnpjs-to-excel", async (event) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         return { success: false, message: "Acesso negado." };
     }
     if (storedCnpjs.size === 0) {
@@ -943,7 +919,7 @@ ipcMain.handle("save-stored-cnpjs-to-excel", async (event) => {
 });
 
 ipcMain.handle("delete-batch", async (event, batchId) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         return { success: false, message: "Acesso negado." };
     }
     const log = (msg) => event.sender.send("log", msg);
@@ -982,7 +958,7 @@ ipcMain.handle("delete-batch", async (event, batchId) => {
 });
 
 ipcMain.handle("update-blocklist", async (event, backup) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         return { success: false, message: "Acesso negado." };
     }
     const log = (msg) => event.sender.send("log", msg);
@@ -1010,11 +986,10 @@ ipcMain.handle("update-blocklist", async (event, backup) => {
 });
 
 ipcMain.on("start-cleaning", async (event, args) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         return;
     }
-    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
     try {
         const batchId = `batch-${Date.now()}`;
@@ -1079,22 +1054,17 @@ ipcMain.on("start-cleaning", async (event, args) => {
 });
 
 async function processFile(fileObj, rootSet, destCol, event, backup, checkDb, saveToDb, cnpjsHistory) {
-    // ... (código original sem alterações, pois já é chamado por uma função protegida)
     const file = fileObj.path;
     const id = fileObj.id;
     const log = (msg) => event.sender.send("log", msg);
     const progress = (pct) => event.sender.send("progress", { id, progress: pct });
-    log(`\nProcessando arquivo de limpeza: ${path.basename(file)
-        }...`);
+    log(`\nProcessando arquivo de limpeza: ${path.basename(file)}...`);
     if (!fs.existsSync(file))
         return new Set();
 
     if (backup) {
         const p = path.parse(file);
-        const bkp = path.join(p.dir, `${p.name
-            }.backup_${Date.now()
-            }${p.ext
-            }`);
+        const bkp = path.join(p.dir, `${p.name}.backup_${Date.now()}${p.ext}`);
         fs.copyFileSync(file, bkp);
         log(`Backup criado: ${bkp}`);
     }
@@ -1111,8 +1081,7 @@ async function processFile(fileObj, rootSet, destCol, event, backup, checkDb, sa
     const cpfColIdx = header.findIndex(h => String(h).trim().toLowerCase() === "cpf");
 
     if (cpfColIdx === -1) {
-        log(`❌ ERRO: A coluna \"cpf\" não foi encontrada no arquivo ${path.basename(file)
-            }. Pulando este arquivo.`);
+        log(`❌ ERRO: A coluna \"cpf\" não foi encontrada no arquivo ${path.basename(file)}. Pulando este arquivo.`);
         return new Set();
     }
     const foneIdxs = header.reduce((acc, cell, i) => {
@@ -1159,18 +1128,15 @@ async function processFile(fileObj, rootSet, destCol, event, backup, checkDb, sa
     XLSX.utils.book_append_sheet(newWB, XLSX.utils.aoa_to_sheet(cleaned), wb.SheetNames[0]);
     writeSpreadsheet(newWB, file);
     progress(100);
-    log(`Arquivo: ${path.basename(file)
-        }\n • Clientes repetidos (BD): ${removedDuplicates}\n • Removidos pela Raiz: ${removedByRoot}\n • Fones limpos: ${cleanedPhones}\n • Total final: ${cleaned.length - 1
-        }`);
+    log(`Arquivo: ${path.basename(file)}\n • Clientes repetidos (BD): ${removedDuplicates}\n • Removidos pela Raiz: ${removedByRoot}\n • Fones limpos: ${cleanedPhones}\n • Total final: ${cleaned.length - 1}`);
     return newCnpjsInThisFile;
 }
 
 ipcMain.on("start-db-only-cleaning", async (event, { filesToClean, saveToDb }) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         return;
     }
-    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
     const batchId = `batch-${Date.now()}`;
     log(`--- Iniciando Limpeza Apenas pelo Banco de Dados para ${filesToClean.length} arquivo(s) ---`);
@@ -1229,11 +1195,10 @@ ipcMain.on("start-db-only-cleaning", async (event, { filesToClean, saveToDb }) =
 });
 
 ipcMain.on("start-merge", async (event, files) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         return;
     }
-    // ... (restante da função)
     const log = (msg) => event.sender.send("log", msg);
     if (!files || files.length < 2) {
         log("❌ Erro: Por favor, selecione pelo menos dois arquivos para mesclar.");
@@ -1291,7 +1256,7 @@ ipcMain.on("start-merge", async (event, files) => {
 });
 
 ipcMain.on("start-adjust-phones", async (event, args) => {
-    if (!isAdmin()) { // Verificação de permissão
+    if (!isAdmin()) { 
         event.sender.send("log", "❌ Acesso negado: Permissão de administrador necessária.");
         return;
     }
@@ -1345,7 +1310,6 @@ async function processNextInApiQueue(event, keyMode) {
 }
 
 async function runApiConsultation(filePath, keyMode, log, progress) {
-    // ... (código original da função sem alterações)
     const credentials = {
         c6: {
             CLIENT_ID: "EA8ZUFeZVSeqMGr49XJSsZKFuxSZub3i",
@@ -1404,32 +1368,26 @@ async function runApiConsultation(filePath, keyMode, log, progress) {
             log("✅ Nenhum registro novo para consultar neste arquivo.");
             return;
         }
-        log(`Encontrados ${registros.length
-            } registros novos para processar.`);
+        log(`Encontrados ${registros.length} registros novos para processar.`);
         const lotes = [];
         for (let i = 0; i < registros.length; i += BATCH_SIZE) {
             lotes.push(registros.slice(i, i + BATCH_SIZE));
         }
         for (let i = 0; i < lotes.length; i++) {
             const lote = lotes[i];
-            log(`\n=== Processando Lote ${i + 1
-                }/${lotes.length
-                } (${lote.length
-                } registros) ===`);
+            log(`\n=== Processando Lote ${i + 1}/${lotes.length} (${lote.length} registros) ===`);
             progress(i + 1, lotes.length);
             let currentCreds;
             if (keyMode === "intercalar") {
                 currentCreds = i % 2 === 0 ? credentials.c6 : credentials.im;
-                log(`Usando credenciais intercaladas: ${currentCreds.name
-                    }`);
+                log(`Usando credenciais intercaladas: ${currentCreds.name}`);
             } else if (keyMode === "chave2") {
                 currentCreds = credentials.im;
             } else {
                 currentCreds = credentials.c6;
             }
             if (keyMode !== "intercalar" && i === 0) {
-                log(`Usando credenciais fixas: ${currentCreds.name
-                    }`);
+                log(`Usando credenciais fixas: ${currentCreds.name}`);
             }
             let sucesso = false;
             let retries = 0;
@@ -1473,10 +1431,8 @@ async function runApiConsultation(filePath, keyMode, log, progress) {
                     });
                     const countCliente = lote.length - countDisponivel;
                     log(`Resultados do Lote: ${countDisponivel} disponível(is), ${countCliente} cliente(s).`);
-                    log(`💾 Salvando progresso do lote ${i + 1
-                        } na planilha...`);
-                    const tempFilePath = path.join(path.dirname(filePath), `${path.basename(filePath, ".xlsx")
-                        }_temp.xlsx`);
+                    log(`💾 Salvando progresso do lote ${i + 1} na planilha...`);
+                    const tempFilePath = path.join(path.dirname(filePath), `${path.basename(filePath, ".xlsx")}_temp.xlsx`);
                     await workbook.xlsx.writeFile(tempFilePath);
                     fs.unlinkSync(filePath);
                     fs.renameSync(tempFilePath, filePath);
@@ -1484,11 +1440,9 @@ async function runApiConsultation(filePath, keyMode, log, progress) {
                     sucesso = true;
                 } catch (err) {
                     retries++;
-                    log(`❌ Erro no processamento do lote (tentativa ${retries}/${MAX_RETRIES}): ${err.message
-                        }.`);
+                    log(`❌ Erro no processamento do lote (tentativa ${retries}/${MAX_RETRIES}): ${err.message}.`);
                     if (retries < MAX_RETRIES) {
-                        log(`Tentando novamente em ${RETRY_MS / 60000
-                            } minutos...`);
+                        log(`Tentando novamente em ${RETRY_MS / 60000} minutos...`);
                         await sleep(RETRY_MS);
                     } else {
                         log(`Máximo de tentativas atingido para este lote. Pulando para o próximo.`);
@@ -1496,17 +1450,13 @@ async function runApiConsultation(filePath, keyMode, log, progress) {
                 }
             }
             if (i < lotes.length - 1) {
-                log(`Aguardando ${DELAY_SUCESSO_MS / 60000
-                    } minutos antes do próximo lote...`);
+                log(`Aguardando ${DELAY_SUCESSO_MS / 60000} minutos antes do próximo lote...`);
                 await sleep(DELAY_SUCESSO_MS);
             }
         }
-        log(`\n🎉 Arquivo ${path.basename(filePath)
-            } processado e salvo.`);
+        log(`\n🎉 Arquivo ${path.basename(filePath)} processado e salvo.`);
     } catch (error) {
-        log(`❌ Erro fatal ao processar o arquivo ${path.basename(filePath)
-            }: ${error.message
-            }`);
+        log(`❌ Erro fatal ao processar o arquivo ${path.basename(filePath)}: ${error.message}`);
         console.error(error);
     }
 }

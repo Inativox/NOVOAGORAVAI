@@ -1,3 +1,4 @@
+console.log('--- RENDERER.JS CARREGADO - VERSÃO NOVA ---');
 document.addEventListener('DOMContentLoaded', () => {
     const getBasename = (p) => p.split(/[\\/]/).pop();
 
@@ -6,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTabTitle = document.getElementById('current-tab-title');
     const currentTabDescription = document.getElementById('current-tab-description');
     const mainTitle = document.getElementById("main-app-title");
+    const logoutBtn = document.getElementById('logoutBtn');
 
     // Armazena o perfil do usuário logado
     let currentUserRole = null;
@@ -20,8 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentUserSpan) {
             currentUserSpan.textContent = username;
         }
+        if (logoutBtn) {
+            logoutBtn.style.display = 'inline-flex';
+        }
         setupUIForRole(role);
     });
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            window.electronAPI.logout();
+        });
+    }
 
     function setupUIForRole(role) {
         // Renderiza os filtros da aba de monitoramento de acordo com o perfil
@@ -548,6 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataFimInput = document.getElementById('data_fim_monitor');
     const monitoringSearchInput = document.getElementById('monitoringSearchInput');
     const dateFilterMenu = document.getElementById('date-filter-menu');
+    const operatorTimesContainer = document.getElementById('operator-times-container');
+    const operatorTimesTableWrapper = document.getElementById('operator-times-table-wrapper');
 
     const apiParams = [
         { name: 'id', label: 'Call ID' }, { name: 'nome', label: 'Nome Cliente' }, { name: 'chave', label: 'Chave' },
@@ -672,47 +685,123 @@ document.addEventListener('DOMContentLoaded', () => {
     const getApiDate = (dateString) => { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}/${month}/${year}`; }
     if (dateFilterMenu) { dateFilterMenu.addEventListener('click', (e) => { if (e.target.tagName === 'LI') { const period = e.target.dataset.period; const today = new Date(); let startDate, endDate = new Date(); switch (period) { case 'today': startDate = today; endDate = today; break; case 'yesterday': startDate = new Date(today); startDate.setDate(today.getDate() - 1); endDate = startDate; break; case 'this_week': startDate = new Date(today); const dayOfWeek = today.getDay(); startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)); endDate = today; break; case 'last_week': startDate = new Date(today); startDate.setDate(today.getDate() - today.getDay() - 6); endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6); break; case 'this_month': startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = today; break; } if (dataInicioInput) dataInicioInput.value = getHtmlDate(startDate); if (dataFimInput) dataFimInput.value = getHtmlDate(endDate); e.target.closest('details').removeAttribute('open'); } }); }
 
-    if (generateReportBtn) generateReportBtn.addEventListener('click', async () => {
-        generateReportBtn.disabled = true;
-        monitoringLog.innerHTML = '> 🌀 Gerando relatório... Por favor, aguarde.';
-        dashboardSummary.innerHTML = '';
-        dashboardDetails.innerHTML = '';
-        let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
-        let params = [];
+  if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', async () => {
+            // ETAPA 1: Preparação (continua igual)
+            generateReportBtn.disabled = true;
+            monitoringLog.innerHTML = '> 🌀 Gerando relatório de chamadas... Por favor, aguarde.';
+            dashboardSummary.innerHTML = '';
+            dashboardDetails.innerHTML = '';
+            operatorTimesContainer.style.display = 'none';
+            operatorTimesTableWrapper.innerHTML = '';
 
-        const isAdmin = currentUserRole === 'admin';
-        const allPossibleParams = apiParams.map(p => p.name);
+            // ETAPA 2: Montagem da URL principal (continua igual)
+            let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
+            let params = [];
+            const isAdmin = currentUserRole === 'admin';
+            const allPossibleParams = apiParams.map(p => p.name);
 
-        allPossibleParams.forEach(paramName => {
-            const checkbox = document.getElementById(`check-${paramName}`);
-            let value = '';
-
-            if (checkbox && checkbox.checked) {
-                if (paramName === 'digitado' && !isAdmin) {
-                    const radioChecked = document.querySelector('input[name="digitado_radio"]:checked');
-                    value = radioChecked ? radioChecked.value : '';
-                } else {
-                    const input = document.getElementById(`input-${paramName}`);
-                    if (input) value = input.value;
+            allPossibleParams.forEach(paramName => {
+                const checkbox = document.getElementById(`check-${paramName}`);
+                let value = '';
+                if (checkbox && checkbox.checked) {
+                    if (paramName === 'digitado' && !isAdmin) {
+                        const radioChecked = document.querySelector('input[name="digitado_radio"]:checked');
+                        value = radioChecked ? radioChecked.value : '';
+                    } else {
+                        const input = document.getElementById(`input-${paramName}`);
+                        if (input) value = input.value;
+                    }
                 }
+                params.push(`${paramName}=${encodeURIComponent(value ?? '')}`);
+            });
+
+            const dataInicio = getApiDate(dataInicioInput.value);
+            const dataFim = getApiDate(dataFimInput.value);
+            params.push(`data_inicio=${dataInicio}`);
+            params.push(`data_fim=${dataFim}`);
+            params.push('formato=json');
+            const finalUrl = baseUrl + params.join('&');
+
+            
+            // --- ETAPA 3: AQUI ENTRA A NOVA LÓGICA UNIFICADA ---
+            let payload = {
+                reportUrl: finalUrl,
+                operatorTimesParams: null // Começa como nulo
+            };
+
+            const operadorIdChecked = document.getElementById('check-operador_id')?.checked;
+            const grupoOperadorIdChecked = document.getElementById('check-grupo_operador_id')?.checked;
+
+            if (operadorIdChecked || grupoOperadorIdChecked) {
+                payload.operatorTimesParams = {
+                    data_inicio: dataInicio,
+                    data_fim: dataFim,
+                    operador_id: document.getElementById('input-operador_id')?.value || '',
+                    grupo_operador_id: document.getElementById('input-grupo_operador_id')?.value || ''
+                };
             }
-            params.push(`${paramName}=${encodeURIComponent(value ?? '')}`);
+
+            const result = await window.electronAPI.fetchMonitoringReport(payload);
+
+            if (result.success && result.data) {
+                updateDashboard(result.data);
+                monitoringLog.innerHTML = `> ✅ Relatório de chamadas gerado com sucesso. ${result.data.length} registros encontrados.`;
+                
+                // Agora verificamos se os dados de tempos vieram na mesma resposta
+                if (result.operatorTimesData) {
+                    renderOperatorTimesTable(result.operatorTimesData);
+                    monitoringLog.innerHTML += '<br>> ✅ Dados de tempos dos operadores carregados.';
+                }
+            } else {
+                monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API.'}`;
+            }
+
+            // ETAPA 4: Finalização (continua igual)
+            generateReportBtn.disabled = false;
         });
+    }
 
-        params.push(`data_inicio=${getApiDate(dataInicioInput.value)}`);
-        params.push(`data_fim=${getApiDate(dataFimInput.value)}`);
-        params.push('formato=json');
-
-        const finalUrl = baseUrl + params.join('&');
-        const result = await window.electronAPI.fetchMonitoringReport(finalUrl);
-        if (result.success && result.data) {
-            updateDashboard(result.data);
-            monitoringLog.innerHTML = `> ✅ Relatório gerado com sucesso. ${result.data.length} registros encontrados.`;
-        } else {
-            monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API.'}`;
+    function renderOperatorTimesTable(csvData) {
+        if (!csvData) {
+            operatorTimesContainer.style.display = 'none';
+            return;
         }
-        generateReportBtn.disabled = false;
-    });
+
+        const rows = csvData.trim().split('\n');
+        if (rows.length < 2) {
+            operatorTimesTableWrapper.innerHTML = '<p>Nenhum dado de tempo encontrado para a seleção.</p>';
+            operatorTimesContainer.style.display = 'block';
+            return;
+        }
+
+        const headers = rows[0].split(';');
+        const data = rows.slice(1).map(row => row.split(';'));
+
+        let tableHtml = '<table class="operator-times-table">';
+        // Cabeçalho
+        tableHtml += '<thead><tr>';
+        headers.forEach(header => {
+            tableHtml += `<th>${header.trim()}</th>`;
+        });
+        tableHtml += '</tr></thead>';
+
+        // Corpo da tabela
+        tableHtml += '<tbody>';
+        data.forEach(rowData => {
+            if (rowData.length < headers.length) return; // Ignora linhas malformadas
+            tableHtml += '<tr>';
+            rowData.forEach(cell => {
+                tableHtml += `<td>${cell.trim()}</td>`;
+            });
+            tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+
+        operatorTimesTableWrapper.innerHTML = tableHtml;
+        operatorTimesContainer.style.display = 'block';
+    }
+
 
     function updateDashboard(data) {
         if (!data || !Array.isArray(data)) { dashboardSummary.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1 / -1;">Ocorreu um erro ou nenhum dado foi retornado.</p>'; dashboardDetails.innerHTML = ''; return; }

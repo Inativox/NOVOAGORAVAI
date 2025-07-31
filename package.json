@@ -1,6 +1,6 @@
 {
   "name": "gerenciador-de-bases",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "App unificado para limpeza, consulta e enriquecimento de bases.",
   "author": "Davi Abraão",
   "main": "main.js",
@@ -17,6 +17,7 @@
     "axios": "^1.6.0",
     "csv-parse": "^6.1.0",
     "electron-log": "^5.4.1",
+    "electron-store": "^7.0.3",
     "electron-updater": "^6.1.1",
     "exceljs": "^4.3.0",
     "firebase-admin": "^12.1.0",
@@ -51,4 +52,4 @@
       }
     ]
   }
-} 
+}
