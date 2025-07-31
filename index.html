@@ -119,6 +119,33 @@
             font-size: 14px;
         }
 
+/* Adicione estas novas regras */
+.collapsible-filters summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.collapsible-filters summary:hover {
+    color: var(--accent-light);
+}
+
+.collapsible-filters summary::after {
+    content: '▼';
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease, color 0.2s ease;
+    padding-right: 10px;
+}
+
+.collapsible-filters[open] > summary::after {
+    transform: rotate(-180deg);
+}
+
+.collapsible-filters[open] > summary {
+    color: var(--accent-light);
+}
         .container { 
             animation: containerFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             max-width: 1400px; 
@@ -224,16 +251,90 @@
         .tool-group { padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 20px; }
         .tool-group:first-child { padding-top: 0; border-top: none; margin-top: 0; }
         
-        .toggle-switch { display: flex; align-items: center; }
-        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--text-muted); border-radius: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3); }
-        input:checked + .slider { background: var(--gradient-success); }
-        input:focus + .slider { box-shadow: 0 0 0 2px var(--shadow-accent), inset 0 1px 3px rgba(0, 0, 0, 0.2); }
-        input:checked + .slider:before { transform: translateX(20px); }
-        .toggle-label { margin-left: 12px; font-weight: 500; color: var(--text-secondary); transition: color 0.3s; font-size: 13px; user-select: none;}
-        
+       .toggle-switch {
+  display: inline-flex; /* Usa inline-flex para se alinhar bem com outros elementos na linha */
+  align-items: center;
+  vertical-align: middle; /* Garante alinhamento vertical consistente */
+  gap: 12px; /* Substitui o margin-left no texto para um espaçamento mais moderno */
+}
+
+/* O container do switch, que é uma label para acessibilidade.
+   A especificidade aumentada (.toggle-switch .switch) o protege de regras globais. */
+.toggle-switch .switch {
+  position: relative;
+  display: inline-block;
+  
+  /* Variáveis para fácil customização de tamanho */
+  --switch-width: 44px;
+  --switch-height: 24px;
+  --switch-padding: 3px;
+  --handle-size: calc(var(--switch-height) - (var(--switch-padding) * 2));
+  --handle-travel-distance: calc(var(--switch-width) - var(--handle-size) - (var(--switch-padding) * 2));
+
+  width: var(--switch-width);
+  height: var(--switch-height);
+  margin: 0; /* Anula margens indesejadas que possam vir de regras globais para 'label' */
+}
+
+/* Esconde o checkbox padrão, mas o mantém funcional e acessível */
+.toggle-switch .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* O fundo do switch (a 'pista' onde o círculo desliza) */
+.toggle-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--text-muted);
+  border-radius: var(--switch-height); /* Raio sempre perfeito, baseado na altura */
+  transition: background-color 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* O círculo/puxador do switch */
+.toggle-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: var(--handle-size);
+  width: var(--handle-size);
+  left: var(--switch-padding);
+  bottom: var(--switch-padding);
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- ESTADOS DO SWITCH --- */
+
+/* Estado ATIVADO (checked) */
+.toggle-switch input:checked + .slider {
+  background: var(--gradient-success); /* Usando o gradiente do seu tema */
+}
+
+.toggle-switch input:checked + .slider:before {
+  transform: translateX(var(--handle-travel-distance));
+}
+
+/* Estado de FOCO (para acessibilidade, aparece ao navegar com Tab) */
+.toggle-switch input:focus-visible + .slider {
+  box-shadow: 0 0 0 3px var(--shadow-accent), inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* O texto ao lado do switch */
+.toggle-switch .toggle-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 13px;
+  user-select: none;
+  /* A propriedade 'margin-left' foi substituída por 'gap' no container .toggle-switch */
+}
         #apiDropzone { border: 2px dashed var(--border-color); border-radius: 12px; padding: 30px; text-align: center; margin-bottom: 20px; background: var(--bg-dark); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
         #apiDropzone:hover { border-color: var(--accent-color); background: rgba(59, 130, 246, 0.05); transform: translateY(-1px); }
         #apiDropzone.dragover { border-color: var(--accent-color); background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px var(--shadow-accent); }
@@ -326,7 +427,7 @@
         }
         .param-item .toggle-label { flex-shrink: 0;}
         .param-item input[type="text"], .param-item .custom-select-container, .param-item .radio-group-container, .param-item .multi-select-container { flex-grow: 1; }
-        .param-item input[type="text"].hidden, .param-item .custom-select-container.hidden, .param-item .radio-group-container.hidden, .param-item .multi-select-container.hidden { display: none; }
+        .param-item input[text].hidden, .param-item .custom-select-container.hidden, .param-item .radio-group-container.hidden, .param-item .multi-select-container.hidden { display: none; }
 
         .monitoring-dashboard {
             display: grid;
@@ -380,10 +481,70 @@
             max-height: 200px;
             overflow-y: auto;
         }
-        .tabulation-call-list li { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid var(--border-color); font-size: 12px; }
-        .tabulation-call-list li:last-child { border: none; }
-        .call-cnpj { color: var(--text-secondary); }
-        .call-duration { font-weight: 600; color: var(--accent-light); }
+        
+        /* ================= INÍCIO DOS NOVOS ESTILOS ================= */
+        .tabulation-call-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Centraliza verticalmente */
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        .tabulation-call-list li:last-child {
+            border: none;
+        }
+
+        .call-info {
+            display: flex;
+            flex-direction: column; /* Empilha CNPJ e telefone */
+            gap: 2px;
+        }
+
+        .call-cnpj {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .call-phone {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .call-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0; /* Impede que os botões encolham */
+        }
+        
+        .call-duration {
+            font-weight: 600;
+            color: var(--accent-light);
+            background-color: var(--bg-dark);
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            background-color: var(--bg-dark);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .download-link:hover {
+            background-color: var(--accent-color);
+            color: var(--accent-text);
+            transform: scale(1.1);
+        }
+        /* ================= FIM DOS NOVOS ESTILOS ================= */
 
         /* --- ESTILOS PARA SELETORES PESQUISÁVEIS --- */
         .custom-select-container {
@@ -1013,7 +1174,7 @@
             <p>Usuário: <span id="currentUser" style="font-weight: bold;"></span></p>
             <button id="logoutBtn" class="btn-danger" style="padding: 4px 10px; font-size: 12px; display: none;">Sair</button>
         </div>
-        <p>Criador: Davi Abraão | Versão: 2.3</p>
+        <p>Criador: Davi Abraão | Versão: 2.1.8</p>
         <div id="update-message"></div>
     </footer>
 </body>

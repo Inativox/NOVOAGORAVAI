@@ -32,7 +32,8 @@ const users = {
     'Laiane': { password: '123456', role: 'limited' },
     'Waleska': { password: '123456', role: 'limited' },
     'Gomes': { password: '123456', role: 'limited' },
-    'Tati': { password: '123456', role: 'limited' },
+    'Tatiane': { password: '123456', role: 'limited' },
+    'Natallia': { password: '123456', role: 'limited' },
 };
 
 let mainWindow;
@@ -719,6 +720,67 @@ ipcMain.handle('fetch-monitoring-report', async (event, { reportUrl, operatorTim
     // --- ETAPA 3: Retornar o resultado final (com ou sem os dados de tempos) ---
     return mainReportResult;
 });
+
+// #################################################################
+// #           NOVO HANDLER PARA DOWNLOAD DE GRAVAÇÕES             #
+// #################################################################
+
+ipcMain.handle('download-recording', async (event, url, fileName) => {
+    if (!mainWindow) {
+        return { success: false, message: 'Janela principal não encontrada.' };
+    }
+    
+    // 1. Abre a caixa de diálogo para o usuário escolher onde salvar.
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Salvar Gravação',
+        defaultPath: fileName, // Sugere o nome de arquivo correto
+        filters: [
+            { name: 'Áudio MP3', extensions: ['mp3'] }
+        ]
+    });
+
+    if (canceled || !filePath) {
+        return { success: true, message: 'Download cancelado pelo usuário.' };
+    }
+
+    // 2. Faz o download do arquivo como um stream para não consumir muita memória.
+    try {
+        const response = await axios({
+            method: 'get',
+            url: url,
+            responseType: 'stream',
+            headers: {
+                // Adicionar um User-Agent pode ajudar a evitar bloqueios
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        // 3. Salva o stream de dados no arquivo escolhido pelo usuário.
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
+
+        // Retorna uma promessa que resolve quando o download termina ou falha.
+        return new Promise((resolve, reject) => {
+            writer.on('finish', () => resolve({ success: true, message: `Gravação salva em: ${filePath}` }));
+            writer.on('error', (err) => {
+                console.error("Erro ao salvar o arquivo:", err);
+                reject({ success: false, message: `Falha ao salvar o arquivo: ${err.message}` });
+            });
+        });
+
+    } catch (error) {
+        console.error("Erro no download da gravação:", error);
+        let errorMessage = error.message;
+        if (error.response && error.response.status === 403) {
+            errorMessage = "Acesso negado (403 Forbidden). Verifique a URL ou permissões no servidor.";
+        }
+        return { success: false, message: `Erro ao baixar a gravação: ${errorMessage}` };
+    }
+});
+
+
+
+
 
 // #################################################################
 // #           FUNÇÃO PARA ALIMENTAR A BASE RAIZ                   #

@@ -562,6 +562,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const operatorTimesContainer = document.getElementById('operator-times-container');
     const operatorTimesTableWrapper = document.getElementById('operator-times-table-wrapper');
 
+
+
+
+// Em renderer.js, na seção de lógica da aba de Monitoramento
+
+function hasActiveFilter() {
+    // Verifica a barra de pesquisa principal
+    if (monitoringSearchInput && monitoringSearchInput.value.trim() !== '') {
+        return true;
+    }
+    // Procura por qualquer checkbox de filtro avançado que esteja marcado
+    const advancedFilterCheckboxes = document.querySelectorAll('#api-parameters input[type="checkbox"]');
+    for (const checkbox of advancedFilterCheckboxes) {
+        if (checkbox.checked) {
+            return true; // Encontrou pelo menos um filtro ativo
+        }
+    }
+    return false; // Nenhum filtro ativo foi encontrado
+}
+
+
+
     const apiParams = [
         { name: 'id', label: 'Call ID' }, { name: 'nome', label: 'Nome Cliente' }, { name: 'chave', label: 'Chave' },
         { name: 'cpf', label: 'CPF' }, { name: 'operador_id', label: 'Operador' }, { name: 'fone_origem', label: 'Fone Origem' },
@@ -575,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isAdmin = role === 'admin';
         apiParametersContainer.innerHTML = '';
 
-        const filtersToHideForLimited = ['chave', 'fone_origem', 'sentido', 'tronco_id', 'resultado', 'operacao_id', 'tipoServico', 'servico_id'];
+        const filtersToHideForLimited = ['chave', 'fone_origem', 'sentido', 'tronco_id', 'resultado', 'operacao_id', 'tipoServico', 'servico_id','cpf','nome'];
 
         const visibleParams = isAdmin ? apiParams : apiParams.filter(p => !filtersToHideForLimited.includes(p.name));
 
@@ -686,81 +708,89 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dateFilterMenu) { dateFilterMenu.addEventListener('click', (e) => { if (e.target.tagName === 'LI') { const period = e.target.dataset.period; const today = new Date(); let startDate, endDate = new Date(); switch (period) { case 'today': startDate = today; endDate = today; break; case 'yesterday': startDate = new Date(today); startDate.setDate(today.getDate() - 1); endDate = startDate; break; case 'this_week': startDate = new Date(today); const dayOfWeek = today.getDay(); startDate.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)); endDate = today; break; case 'last_week': startDate = new Date(today); startDate.setDate(today.getDate() - today.getDay() - 6); endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6); break; case 'this_month': startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = today; break; } if (dataInicioInput) dataInicioInput.value = getHtmlDate(startDate); if (dataFimInput) dataFimInput.value = getHtmlDate(endDate); e.target.closest('details').removeAttribute('open'); } }); }
 
   if (generateReportBtn) {
-        generateReportBtn.addEventListener('click', async () => {
-            // ETAPA 1: Preparação (continua igual)
-            generateReportBtn.disabled = true;
-            monitoringLog.innerHTML = '> 🌀 Gerando relatório de chamadas... Por favor, aguarde.';
-            dashboardSummary.innerHTML = '';
-            dashboardDetails.innerHTML = '';
-            operatorTimesContainer.style.display = 'none';
-            operatorTimesTableWrapper.innerHTML = '';
+    generateReportBtn.addEventListener('click', async () => {
+        // --- NOVA VALIDAÇÃO ADICIONADA AQUI ---
+        // Verifica se há pelo menos um filtro ativo antes de continuar.
+        if (!hasActiveFilter()) {
+            // Se não houver, mostra um popup e interrompe a execução.
+            alert('Selecione pelo menos 1 filtro ou preencha o campo de pesquisa.');
+            return;
+        }
+        // --- FIM DA NOVA VALIDAÇÃO ---
 
-            // ETAPA 2: Montagem da URL principal (continua igual)
-            let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
-            let params = [];
-            const isAdmin = currentUserRole === 'admin';
-            const allPossibleParams = apiParams.map(p => p.name);
 
-            allPossibleParams.forEach(paramName => {
-                const checkbox = document.getElementById(`check-${paramName}`);
-                let value = '';
-                if (checkbox && checkbox.checked) {
-                    if (paramName === 'digitado' && !isAdmin) {
-                        const radioChecked = document.querySelector('input[name="digitado_radio"]:checked');
-                        value = radioChecked ? radioChecked.value : '';
-                    } else {
-                        const input = document.getElementById(`input-${paramName}`);
-                        if (input) value = input.value;
-                    }
+        // ETAPA 1: Preparação (código existente, sem alterações)
+        generateReportBtn.disabled = true;
+        monitoringLog.innerHTML = '> 🌀 Gerando relatório de chamadas... Por favor, aguarde.';
+        dashboardSummary.innerHTML = '';
+        dashboardDetails.innerHTML = '';
+        operatorTimesContainer.style.display = 'none';
+        operatorTimesTableWrapper.innerHTML = '';
+
+        // ETAPA 2: Montagem da URL principal (código existente, sem alterações)
+        let baseUrl = 'https://mbfinance.fastssl.com.br/api/relatorio/captura_valores_analitico.php?';
+        let params = [];
+        const isAdmin = currentUserRole === 'admin';
+        const allPossibleParams = apiParams.map(p => p.name);
+
+        allPossibleParams.forEach(paramName => {
+            const checkbox = document.getElementById(`check-${paramName}`);
+            let value = '';
+            if (checkbox && checkbox.checked) {
+                if (paramName === 'digitado' && !isAdmin) {
+                    const radioChecked = document.querySelector('input[name="digitado_radio"]:checked');
+                    value = radioChecked ? radioChecked.value : '';
+                } else {
+                    const input = document.getElementById(`input-${paramName}`);
+                    if (input) value = input.value;
                 }
-                params.push(`${paramName}=${encodeURIComponent(value ?? '')}`);
-            });
-
-            const dataInicio = getApiDate(dataInicioInput.value);
-            const dataFim = getApiDate(dataFimInput.value);
-            params.push(`data_inicio=${dataInicio}`);
-            params.push(`data_fim=${dataFim}`);
-            params.push('formato=json');
-            const finalUrl = baseUrl + params.join('&');
-
-            
-            // --- ETAPA 3: AQUI ENTRA A NOVA LÓGICA UNIFICADA ---
-            let payload = {
-                reportUrl: finalUrl,
-                operatorTimesParams: null // Começa como nulo
-            };
-
-            const operadorIdChecked = document.getElementById('check-operador_id')?.checked;
-            const grupoOperadorIdChecked = document.getElementById('check-grupo_operador_id')?.checked;
-
-            if (operadorIdChecked || grupoOperadorIdChecked) {
-                payload.operatorTimesParams = {
-                    data_inicio: dataInicio,
-                    data_fim: dataFim,
-                    operador_id: document.getElementById('input-operador_id')?.value || '',
-                    grupo_operador_id: document.getElementById('input-grupo_operador_id')?.value || ''
-                };
             }
-
-            const result = await window.electronAPI.fetchMonitoringReport(payload);
-
-            if (result.success && result.data) {
-                updateDashboard(result.data);
-                monitoringLog.innerHTML = `> ✅ Relatório de chamadas gerado com sucesso. ${result.data.length} registros encontrados.`;
-                
-                // Agora verificamos se os dados de tempos vieram na mesma resposta
-                if (result.operatorTimesData) {
-                    renderOperatorTimesTable(result.operatorTimesData);
-                    monitoringLog.innerHTML += '<br>> ✅ Dados de tempos dos operadores carregados.';
-                }
-            } else {
-                monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API.'}`;
-            }
-
-            // ETAPA 4: Finalização (continua igual)
-            generateReportBtn.disabled = false;
+            params.push(`${paramName}=${encodeURIComponent(value ?? '')}`);
         });
-    }
+
+        const dataInicio = getApiDate(dataInicioInput.value);
+        const dataFim = getApiDate(dataFimInput.value);
+        params.push(`data_inicio=${dataInicio}`);
+        params.push(`data_fim=${dataFim}`);
+        params.push('formato=json');
+        const finalUrl = baseUrl + params.join('&');
+        
+        // ETAPA 3: Lógica unificada de requisição (código existente, sem alterações)
+        let payload = {
+            reportUrl: finalUrl,
+            operatorTimesParams: null
+        };
+
+        const operadorIdChecked = document.getElementById('check-operador_id')?.checked;
+        const grupoOperadorIdChecked = document.getElementById('check-grupo_operador_id')?.checked;
+
+        if (operadorIdChecked || grupoOperadorIdChecked) {
+            payload.operatorTimesParams = {
+                data_inicio: dataInicio,
+                data_fim: dataFim,
+                operador_id: document.getElementById('input-operador_id')?.value || '',
+                grupo_operador_id: document.getElementById('input-grupo_operador_id')?.value || ''
+            };
+        }
+
+        const result = await window.electronAPI.fetchMonitoringReport(payload);
+
+        if (result.success && result.data) {
+            updateDashboard(result.data);
+            monitoringLog.innerHTML = `> ✅ Relatório de chamadas gerado com sucesso. ${result.data.length} registros encontrados.`;
+            
+            if (result.operatorTimesData) {
+                renderOperatorTimesTable(result.operatorTimesData);
+                monitoringLog.innerHTML += '<br>> ✅ Dados de tempos dos operadores carregados.';
+            }
+        } else {
+            monitoringLog.innerHTML = `> ❌ ERRO: ${result.message || 'Falha ao buscar dados da API.'}`;
+        }
+
+        // ETAPA 4: Finalização (código existente, sem alterações)
+        generateReportBtn.disabled = false;
+    });
+}
 
     function renderOperatorTimesTable(csvData) {
         if (!csvData) {
@@ -811,7 +841,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const detailedTabulations = {};
         let totalDurationSeconds = 0;
         let suspiciousCalls = [];
-        data.forEach(item => { const tabulacao = item.tabulacao || 'Não Preenchido'; const duration = getDurationInSeconds(item.tempo_ligacao); for (const key in aggregators) { const value = item[key] || 'Não Preenchido'; aggregators[key][value] = (aggregators[key][value] || 0) + 1; } if (!detailedTabulations[tabulacao]) { detailedTabulations[tabulacao] = []; } detailedTabulations[tabulacao].push({ cpf: item.cpf, duration: item.tempo_ligacao || '00:00:00' }); if (SUSPICIOUS_TABULATIONS.includes(tabulacao) && duration >= SUSPICIOUS_DURATION_SECONDS) { suspiciousCalls.push(item); } totalDurationSeconds += duration; });
+        data.forEach(item => { 
+            const tabulacao = item.tabulacao || 'Não Preenchido'; 
+            const duration = getDurationInSeconds(item.tempo_ligacao); 
+            for (const key in aggregators) { 
+                const value = item[key] || 'Não Preenchido'; 
+                aggregators[key][value] = (aggregators[key][value] || 0) + 1; 
+            } 
+            if (!detailedTabulations[tabulacao]) { 
+                detailedTabulations[tabulacao] = []; 
+            } 
+            detailedTabulations[tabulacao].push(item);
+            
+            if (SUSPICIOUS_TABULATIONS.includes(tabulacao) && duration >= SUSPICIOUS_DURATION_SECONDS) { 
+                suspiciousCalls.push(item); 
+            } 
+            totalDurationSeconds += duration; 
+        });
         lastSuspiciousCalls = suspiciousCalls;
         const avgDurationSeconds = totalCalls > 0 ? totalDurationSeconds / totalCalls : 0;
         const roundedAvgSeconds = Math.round(avgDurationSeconds);
@@ -823,7 +869,96 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardDetails.innerHTML = '';
         const isOperatorFiltered = document.getElementById('check-operador_id')?.checked;
         const createDetailCard = (title, dataObject) => { if (title === 'Top Tabulações' && isOperatorFiltered) { return createInteractiveTabulationCard('Top Tabulações', detailedTabulations); } const sortedData = Object.entries(dataObject).sort(([, a], [, b]) => b - a); let listItems = sortedData.map(([name, count]) => `<li><span class="name" title="${name}">${name}</span><span class="count">${count.toLocaleString('pt-BR')}</span></li>`).join(''); if (!listItems) listItems = '<li>Nenhum dado.</li>'; return `<div class="detail-card"><h3>${title}</h3><ul class="detail-list custom-scrollbar">${listItems}</ul></div>`; }
-        const createInteractiveTabulationCard = (title, detailedDataObject) => { const sortedTabulations = Object.keys(detailedDataObject).sort((a, b) => detailedDataObject[b].length - detailedDataObject[a].length); let detailsHtml = sortedTabulations.map(tabulationName => { const calls = detailedDataObject[tabulationName]; const isSuspicious = SUSPICIOUS_TABULATIONS.includes(tabulationName); const callListHtml = calls.map(call => `<li><span class="call-cnpj">CNPJ: ${call.cpf || 'N/A'}</span><span class="call-duration">Duração: ${call.duration}</span></li>`).join(''); return `<details><summary class="${isSuspicious ? 'suspicious-summary' : ''}"><span>${tabulationName}</span><span>${calls.length} chamadas</span></summary><ul class="tabulation-call-list custom-scrollbar">${callListHtml}</ul></details>`; }).join(''); return `<div class="detail-card interactive-tabulation"><h3>${title} (Detalhado)</h3><div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">${detailsHtml}</div></div>`; };
+        
+       const createInteractiveTabulationCard = (title, detailedDataObject) => {
+    const sortedTabulations = Object.keys(detailedDataObject).sort((a, b) => detailedDataObject[b].length - detailedDataObject[a].length);
+
+    let detailsHtml = sortedTabulations.map(tabulationName => {
+        const calls = detailedDataObject[tabulationName];
+        const isSuspicious = SUSPICIOUS_TABULATIONS.includes(tabulationName);
+
+        const callListHtml = calls.map((call, index) => {
+            const callId = call.id || '';
+            const chave = call.chave || '';
+            const protocolo = call.protocolo || '';
+            const downloadUrl = `http://mbfinance.fastssl.com.br/api/gravacao/index.php?id=${callId}&chave=${chave}&protocolo=${protocolo}&tipo_download=1&checkout_step=`;
+            
+            const operatorFirstName = (call.nome_operador || '').split(' ')[0];
+            const cnpj = call.cpf || '';
+            let fileName = 'gravacao_desconhecida.mp3';
+
+            if (operatorFirstName && cnpj) {
+                fileName = `${operatorFirstName}_${cnpj}.mp3`;
+            } else if (cnpj) {
+                fileName = `${cnpj}.mp3`;
+            } else if (callId) {
+                fileName = `gravacao_${callId}.mp3`;
+            }
+
+            // ID único para o botão de download
+            const downloadButtonId = `download-btn-${tabulationName.replace(/[^a-zA-Z0-9]/g, '-')}-${index}`;
+            
+            // Adiciona o event listener de forma assíncrona para garantir que o elemento exista no DOM
+            setTimeout(() => {
+                const btn = document.getElementById(downloadButtonId);
+                if (btn) {
+                    btn.addEventListener('click', async () => {
+                        const originalContent = btn.innerHTML;
+                        // Mostra um spinner e desabilita o botão durante o download
+                        btn.disabled = true;
+                        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="animation: spin 1s linear infinite;"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>`;
+                        
+                        appendLog(`Solicitando download para: ${fileName}`);
+                        try {
+                            // Chama a função do main.js via preload
+                            const result = await window.electronAPI.downloadRecording(downloadUrl, fileName);
+                            appendLog(`✅ ${result.message}`);
+                        } catch (err) {
+                            appendLog(`❌ Erro no processo de download: ${err.message}`);
+                        } finally {
+                            // Restaura o botão ao estado original
+                            btn.disabled = false;
+                            btn.innerHTML = originalContent;
+                        }
+                    });
+                }
+            }, 0);
+
+            // Retorna o HTML do item da lista com um <button> em vez de <a href>
+            return `
+                <li>
+                    <div class="call-info">
+                        <span class="call-cnpj">CNPJ: ${call.cpf || 'N/A'}</span>
+                        <span class="call-phone">Tel: ${call.fone || 'N/A'}</span>
+                    </div>
+                    <div class="call-actions">
+                        <span class="call-duration">Duração: ${call.tempo_ligacao || '00:00:00'}</span>
+                        <button id="${downloadButtonId}" class="download-link" title="Baixar gravação: ${fileName}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ffffff viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                        </button>
+                    </div>
+                </li>`;
+        }).join('');
+
+        return `
+            <details>
+                <summary class="${isSuspicious ? 'suspicious-summary' : ''}">
+                    <span>${tabulationName}</span>
+                    <span>${calls.length} chamadas</span>
+                </summary>
+                <ul class="tabulation-call-list custom-scrollbar">${callListHtml}</ul>
+            </details>`;
+    }).join('');
+
+    return `
+        <div class="detail-card interactive-tabulation">
+            <h3>${title} (Detalhado)</h3>
+            <div class="custom-scrollbar" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                ${detailsHtml}
+            </div>
+        </div>`;
+};
+
         dashboardDetails.innerHTML += createDetailCard('Top Tabulações', aggregators.tabulacao);
         dashboardDetails.innerHTML += createDetailCard('Resultados por Chamada', aggregators.resultado);
         dashboardDetails.innerHTML += createDetailCard('Top Operadores', aggregators.nome_operador);

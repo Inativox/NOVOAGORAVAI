@@ -7,7 +7,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onUserInfo: (callback) => ipcRenderer.on('user-info', (event, ...args) => callback(...args)),
 
     // --- Funções da Aba de Monitoramento ---
-   fetchMonitoringReport: (payload) => ipcRenderer.invoke('fetch-monitoring-report', payload), // NOVO: Função que faltava para a 2ª API
+    fetchMonitoringReport: (payload) => ipcRenderer.invoke('fetch-monitoring-report', payload), // NOVO: Função que faltava para a 2ª API
+    downloadRecording: (url, fileName) => ipcRenderer.invoke('download-recording', url, fileName), // NOVO: Função para baixar gravações
 
     // --- Funções da Limpeza Local ---
     selectFile: (options) => ipcRenderer.invoke("select-file", options),
